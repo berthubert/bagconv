@@ -1,9 +1,3 @@
-CREATE TABLE IF NOT EXISTS 'vbos' ( 'id' TEXT , "gebruiksdoel" TEXT, "x" REAL, "y" REAL, "status" TEXT, "oppervlakte" INT) STRICT;
-CREATE TABLE IF NOT EXISTS 'vbo_num' ( 'vbo' TEXT , "num" TEXT) STRICT;
-CREATE TABLE IF NOT EXISTS 'vbo_pnd' ( 'vbo' TEXT , "pnd" TEXT) STRICT;
-CREATE TABLE IF NOT EXISTS 'pnds' ( 'id' TEXT , "geo" TEXT, "bouwjaar" INT, "status" TEXT) STRICT;
-CREATE TABLE IF NOT EXISTS 'nums' ( 'straat' TEXT , "woonplaats" TEXT, "postcode" TEXT, "huisnummer" INT, "huisletter" TEXT, "huistoevoeging" TEXT, "id" TEXT) STRICT;
-
 
 create index vbo_pnd_idx1 on vbo_pnd(pnd);
 create index vbo_pnd_idx2 on vbo_pnd(vbo);
@@ -14,9 +8,11 @@ create index vbo_num_idx2 on vbo_num(vbo);
 create index vbos_id on vbos(id);
 create index pnds_id on pnds(id);
 create index nums_id on nums(id);
+create index oprs_id on nums(id);
 
-create index  straatidx on nums(straat);
-create index  adridx on nums(postcode,huisnummer,huisletter,huistoevoeging);
+create index straatidx on nums(straat);
+create index strtidx on nums(strt);
+create index adridx on nums(postcode,huisnummer,huisletter,huistoevoeging);
 create index woonplaatsstraatidx on nums(woonplaats,straat);
 
 create view if not exists unified as select * from nums,vbo_num,vbos,vbo_pnd,pnds where nums.id = vbo_num.num and vbos.id = vbo_num.vbo and vbos.id = vbo_pnd.vbo and vbo_pnd.pnd=pnds.id;

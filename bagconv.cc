@@ -52,16 +52,28 @@ int main(int argc, char **argv)
     string naam;
     string verkorteNaam;
     string status;
+    string type;
   };
   unordered_map<string, OpenbareRuimte> straatnamen;
 
+  struct VboNumKoppeling
+  {
+    string numid;
+    bool hoofdadres;
+    bool operator<(const VboNumKoppeling& rhs) const
+    {
+      return std::tie(numid, hoofdadres) < std::tie(rhs.numid, rhs.hoofdadres);
+    }
+  };
+  
   struct VerblijfsObject
   {
     int oppervlakte{-1};
     string status;
     set<string> panden;
-    set<string> nums;
+    set<VboNumKoppeling> nums;
     string gebruiksdoel;
+    string type;
     double x{-1}, y{-1};
   };
   unordered_map<string, VerblijfsObject> vbos;
@@ -74,6 +86,7 @@ int main(int argc, char **argv)
     int ligtIn{-1};
     set<string> vbos; // free dedup
     string postcode;
+    string status;
   };
   std::unordered_map<string, NummerAanduiding> nums;
 
@@ -127,8 +140,16 @@ int main(int argc, char **argv)
             continue;
 
           VerblijfsObject vo;
+          if(type=="Objecten:Verblijfsobject")
+            vo.type="vbo";
+          else if(type=="Objecten:Standplaats")
+            vo.type="sta";
+          else if(type=="Objecten:Ligplaats")
+            vo.type="lig";
+              
           string id = stand.child("Objecten:identificatie").begin()->value();
           vo.status = stand.child("Objecten:status").begin()->value();
+          
           if(stand.child("Objecten:oppervlakte"))
             vo.oppervlakte = atoi(stand.child("Objecten:oppervlakte").begin()->value());
           if(stand.child("Objecten:gebruiksdoel"))
@@ -154,7 +175,7 @@ int main(int argc, char **argv)
           if(auto iter = stand.child("Objecten:heeftAlsHoofdadres"); iter) {
             int n=0;
             for(const auto& el : iter) {
-              vo.nums.insert(el.begin()->value());
+              vo.nums.insert({el.begin()->value(), true});
               ++n;
             }
           }
@@ -162,7 +183,7 @@ int main(int argc, char **argv)
           if(auto iter = stand.child("Objecten:heeftAlsNevenadres"); iter) {
             int n=0;
             for(const auto& el : iter) {
-              vo.nums.insert(el.begin()->value());
+              vo.nums.insert({el.begin()->value(), false});
               ++n;
             }
           }
@@ -189,6 +210,9 @@ int main(int argc, char **argv)
           if(auto iter = stand.child("Objecten:postcode"); iter)
             na.postcode = iter.begin()->value();
           na.ligtAan = stand.child("Objecten:ligtAan").child("Objecten-ref:OpenbareRuimteRef").begin()->value();
+          if(auto iter = stand.child("Objecten:status"); iter)
+            na.status = iter.begin()->value();
+                    
           nums[id]=na;
         }
         else if(type=="Objecten:OpenbareRuimte") {
@@ -196,6 +220,7 @@ int main(int argc, char **argv)
             continue;
           OpenbareRuimte opr;
           opr.naam = stand.child("Objecten:naam").begin()->value();
+          opr.type = stand.child("Objecten:type").begin()->value();
           opr.ligtIn= atoi(stand.child("Objecten:ligtIn").child("Objecten-ref:WoonplaatsRef").begin()->value());
           string id = stand.child("Objecten:identificatie").begin()->value();
           if(auto iter = stand.child("Objecten:status"); iter)
@@ -212,17 +237,19 @@ int main(int argc, char **argv)
       }
     }
   }
-
+  for(const auto& opr: straatnamen) {
+    sqw.addValue({{"id", opr.first}, {"naam", opr.second.naam}, {"type", opr.second.type}, {"woonplaatsref", opr.second.ligtIn}}, "oprs");
+  }
 
   for(const auto& vbo: vbos) {
     sqw.addValue({{"id", vbo.first}, {"gebruiksdoel", vbo.second.gebruiksdoel},
                   {"x", vbo.second.x}, {"y", vbo.second.y}, {"status", vbo.second.status},
-                  {"oppervlakte", vbo.second.oppervlakte}}, "vbos");
+                  {"oppervlakte", vbo.second.oppervlakte}, {"type", vbo.second.type}}, "vbos");
     for(const auto& num : vbo.second.nums) {
-      auto iter = nums.find(num);
+      auto iter = nums.find(num.numid);
       if(iter != nums.end()) {
         iter->second.vbos.insert(vbo.first);
-        sqw.addValue({{"vbo", vbo.first}, {"num", num}}, "vbo_num");
+        sqw.addValue({{"vbo", vbo.first}, {"num", num.numid}, {"hoofdadres", num.hoofdadres}}, "vbo_num");
       }
     }
     for(const auto& pnd : vbo.second.panden) {
@@ -252,7 +279,7 @@ int main(int argc, char **argv)
       woonplaats = woonplaatsen.find(num.second.ligtIn);
       cout<<" Afwijkende stad: "<< woonplaats->second;
     }
-    sqw.addValue({{"straat", straat->second.naam}, {"strt", straat->second.verkorteNaam}, {"woonplaats", woonplaats->second}, {"postcode", num.second.postcode}, {"huisnummer", num.second.huisnummer}, {"huisletter", num.second.huisletter}, {"huistoevoeging", num.second.toevoeging}, {"id", num.first}}, "nums");
+    sqw.addValue({{"straat", straat->second.naam}, {"strt", straat->second.verkorteNaam}, {"oprref", num.second.ligtAan}, {"woonplaats", woonplaats->second}, {"postcode", num.second.postcode}, {"huisnummer", num.second.huisnummer}, {"huisletter", num.second.huisletter}, {"huistoevoeging", num.second.toevoeging}, {"id", num.first}, {"status", num.second.status}}, "nums");
     for(const auto& vbo : num.second.vbos) {
       auto iter = vbos.find(vbo);
       if(iter != vbos.end()) {
