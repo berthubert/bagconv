@@ -1,6 +1,8 @@
 # bagconv
 Convert the official Dutch building/dwelling administration into a simpler format
 
+**STATUS: Very fresh, do NOT rely on this code for anything serious yet!**
+
 It all starts out with the tremendously detailed set of XML files from the Dutch
 land registry: [LV BAG with History](https://service.pdok.nl/lv/bag/atom/bag.xml).
 The official documentation (in Dutch) can be found on [the GitHub page of
