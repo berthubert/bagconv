@@ -1,5 +1,7 @@
 # bagconv
-Convert the official Dutch building/dwelling administration into a simpler format
+Convert the official Dutch building/dwelling administration into a simpler format.
+
+This will allow you do straightforward queries to go from an address to a postcode and vice-versa. You also get the coordinates of an address, and if you want, the contours of the buildings the address is in.
 
 **STATUS: Very fresh, do NOT rely on this code for anything serious yet!**
 
@@ -76,6 +78,62 @@ The tables are:
  * `nums` - `Nummeraanduidingen` - addresses, including postcode
 
 In the `mkindex` file you'll find useful views that make queryig easier.
+
+# Some examples
+
+This gets you everything for the headquarters of the Dutch Kadaster agency, including the shape of their building:
+```sql
+sqlite> select * from unified where straat='Hofstraat' and huisnummer=110 and woonplaats='Apeldoorn';
+        straat = Hofstraat
+          strt = 
+        oprref = 0200300022471548
+    woonplaats = Apeldoorn
+      postcode = 7311KZ
+    huisnummer = 110
+    huisletter = 
+huistoevoeging = 
+            id = 0200200000007079
+        status = Naamgeving uitgegeven
+           vbo = 0200010000090244
+           num = 0200200000007079
+    hoofdadres = 1
+          id:1 = 0200010000090244
+  gebruiksdoel = kantoorfunctie
+             x = 194315.783
+             y = 469449.074
+      status:1 = Verblijfsobject in gebruik
+   oppervlakte = 8870
+          type = vbo
+         vbo:1 = 0200010000090244
+           pnd = 0200100000001088
+          id:2 = 0200100000001088
+           geo = 194305.556 469481.503 0.0 194293.842 469472.735 0.0 194299.704 469458.128 0.0 194308.96 469435.067 0.0 194314.846 469437.415 0.0 194313.03 469441.967 0.0 194315.389 469442.923 0.0 194318.6 469438.659 0.0 194322.608 469441.677 0.0 194330.846 469447.881 0.0 194327.825 469451.891 0.0 194320.342 469461.906 0.0 194307.626 469478.806 0.0 194306.163 469480.712 0.0 194305.556 469481.503 0.0
+      bouwjaar = 1985
+      status:2 = Pand in gebruik
+```
+
+If you just want to get from postcode to address:
+
+```sql
+sqlite> select * from unilabel where postcode='7311KZ' and huisnummer=110;
+        straat = Hofstraat
+    huisnummer = 110
+    huisletter = 
+huistoevoeging = 
+    woonplaats = Apeldoorn
+      postcode = 7311KZ
+             x = 194315.783
+             y = 469449.074
+   oppervlakte = 8870
+  gebruiksdoel = kantoorfunctie
+    num_status = Naamgeving uitgegeven
+    vbo_status = Verblijfsobject in gebruik
+          type = vbo
+        num_id = 0200200000007079
+        vbo_id = 0200010000090244
+        opr_id = 0200300022471548
+```
+
 
 # Compiling
 Make sure you have cmake and SQLite development files installed, and then run:
