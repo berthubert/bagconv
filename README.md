@@ -29,13 +29,13 @@ The XML files contain data on over 30 million objects, and their relations.
 Oh, and the history. This is around 75GB of XML.
 
 # Making life simpler
-If you have 16 gigabytes of ram, and you have downloaded and unzipped [the
+If you have downloaded and unzipped [the
 XML
 files](https://service.pdok.nl/lv/bag/atom/downloads/lvbag-extract-nl.zip)
 you can run the code in this repository like this:
 
 ```bash
-$ ./bagconv 9999{OPR,NUM,WPL,VBO,LIG,STA,PND}*.xml > txt
+$ ./bagconv 9999{WPL,OPR,NUM,VBO,LIG,STA,PND}*.xml > txt
 ```
 
 This will 1) create a text file with debugging output and 2) populate a

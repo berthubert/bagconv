@@ -10,13 +10,14 @@ create index pnds_id on pnds(id);
 create index nums_id on nums(id);
 create index oprs_id on nums(id);
 
-create index straatidx on nums(straat);
-create index strtidx on nums(strt);
 create index adridx on nums(postcode,huisnummer,huisletter,huistoevoeging);
-create index woonplaatsstraatidx on nums(woonplaats,straat);
+create index woonplaatsstraatidx on nums(woonplaats);
 
-create view if not exists unified as select * from nums,vbo_num,vbos,vbo_pnd,pnds where nums.id = vbo_num.num and vbos.id = vbo_num.vbo and vbos.id = vbo_pnd.vbo and vbo_pnd.pnd=pnds.id;
-create view if not exists numvbo as select * from nums,vbo_num,vbos where nums.id = vbo_num.num and vbos.id = vbo_num.vbo;
+create index ligtaanidx on nums(ligtAanRef);
+create index straatnaamidx on oprs(naam);
 
-
-create view unilabel as select straat,huisnummer,huisletter,huistoevoeging,woonplaats,postcode,x,y,oppervlakte,gebruiksdoel,nums.status as num_status, vbos.status as vbo_status,type,nums.id as num_id, vbos.id as vbo_id, nums.oprref as opr_id from nums,vbos,vbo_num where nums.id=vbo_num.num and vbo_num.vbo=vbos.id;
+create view unilabel as select oprs.naam as
+straat,huisnummer,huisletter,huistoevoeging,woonplaats,postcode,x,y,oppervlakte,gebruiksdoel,nums.status
+as num_status, vbos.status as vbo_status, vbos.type as vbo_type,nums.id as num_id, vbos.id as
+vbo_id, nums.ligtAanRef as opr_id from nums,oprs,vbos,vbo_num where
+nums.id=vbo_num.num and nums.ligtAanRef = oprs.id and vbo_num.vbo=vbos.id;

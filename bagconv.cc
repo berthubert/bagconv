@@ -2,6 +2,7 @@
 #include <iostream>
 #include <map>
 #include <unordered_map>
+#include <unistd.h>
 #include <set>
 #include "sqlwriter.hh"
 using namespace std;
@@ -28,7 +29,6 @@ using namespace std;
    Also references related addresses (Nummeraanduiding) through heeftAlsNevenAdres.
 
    PND, pand or building, has date of construction, plus a shape file of the exterior. Also a status.
-
 */
 
 bool outdated(const pugi::xml_node& stand)
@@ -43,8 +43,9 @@ bool outdated(const pugi::xml_node& stand)
 
 int main(int argc, char **argv)
 {
+  unlink("bag.sqlite");
   SQLiteWriter sqw("bag.sqlite");
-  unordered_map<int, string> woonplaatsen;
+  unordered_map<int, string> wpls;
 
   struct OpenbareRuimte
   {
@@ -54,7 +55,7 @@ int main(int argc, char **argv)
     string status;
     string type;
   };
-  unordered_map<string, OpenbareRuimte> straatnamen;
+  unordered_map<string, OpenbareRuimte> oprs;
 
   struct VboNumKoppeling
   {
@@ -111,15 +112,15 @@ int main(int argc, char **argv)
         string type=stand.name();
         count++;
         if(!(count % 32768))
-          cout<<"nums: "<<nums.size()<<", woonplaatsen: "<<woonplaatsen.size()<<", straatnamen: "<<straatnamen.size()<<", verblijfsobjecten: "<<vbos.size()<<
-            ", panden: "<<pnds.size()<<endl;
+          cout<<count<<endl;
         if(type=="Objecten:Woonplaats") {
           if(outdated(stand))
             continue;
 
           int id = atoi(stand.child("Objecten:identificatie").begin()->value());
           string name = stand.child("Objecten:naam").begin()->value();
-          woonplaatsen[id]=name;
+          wpls[id]=name;
+          sqw.addValue({{"id", id}, {"naam", name}}, "wpls");
         }
         else if(type=="Objecten:Pand") {
           if(outdated(stand))
@@ -133,7 +134,9 @@ int main(int argc, char **argv)
           if(pnode.begin() != pnode.end()) {
             pnd.geo = pnode.begin()->node().begin()->value();
           }
-          pnds[id]=pnd;
+          sqw.addValue({{"id", id}, {"geo", pnd.geo}, {"bouwjaar", pnd.constructionYear}, {"status", pnd.status}}, "pnds");
+          //          pnds[id]=pnd;
+          
         }
         else if(type=="Objecten:Verblijfsobject" || type=="Objecten:Standplaats" || type=="Objecten:Ligplaats") {
           if(outdated(stand))
@@ -187,20 +190,23 @@ int main(int argc, char **argv)
               ++n;
             }
           }
-          vbos[id]=vo;
-        }
+          sqw.addValue({{"id", id}, {"gebruiksdoel", vo.gebruiksdoel},
+                        {"x", vo.x}, {"y", vo.y}, {"status", vo.status},
+                        {"oppervlakte", vo.oppervlakte}, {"type", vo.type}}, "vbos");
 
+          for(const auto& num : vo.nums) {
+            sqw.addValue({{"vbo", id}, {"num", num.numid}, {"hoofdadres", num.hoofdadres}}, "vbo_num");
+          }
+          for(const auto& pnd : vo.panden) {
+            sqw.addValue({{"vbo", id}, {"pnd", pnd}}, "vbo_pnd");
+          }
+        }
         else if(type=="Objecten:Nummeraanduiding") {
           if(outdated(stand))
             continue;
 
           NummerAanduiding na;
 
-          // overrides the street Woonplaats
-          if(auto iter = stand.child("Objecten:ligtIn"); iter) {
-            na.ligtIn = atoi(iter.child("Objecten-ref:WoonplaatsRef").begin()->value());
-          }
-                                     
           string id = stand.child("Objecten:identificatie").begin()->value();
           na.huisnummer = atoi(stand.child("Objecten:huisnummer").begin()->value());
           if(auto iter = stand.child("Objecten:huisletter"); iter)
@@ -209,11 +215,36 @@ int main(int argc, char **argv)
             na.toevoeging = iter.begin()->value();
           if(auto iter = stand.child("Objecten:postcode"); iter)
             na.postcode = iter.begin()->value();
+          
           na.ligtAan = stand.child("Objecten:ligtAan").child("Objecten-ref:OpenbareRuimteRef").begin()->value();
+
+          string woonplaats;
+          // overrides the street Woonplaats
+          if(auto iter = stand.child("Objecten:ligtIn"); iter) {
+            na.ligtIn = atoi(iter.child("Objecten-ref:WoonplaatsRef").begin()->value());
+            woonplaats=wpls[na.ligtIn];
+          }
+          else
+            woonplaats=wpls[oprs[na.ligtAan].ligtIn];
+
+          if(woonplaats.empty()) {
+            cout<<na.ligtAan<<endl;
+            cout<<oprs[na.ligtAan].ligtIn<<endl;
+            cout<<"Failure to look up woonplaats for Nummeraanduiding id "<<id<<", make sure to parse WPL and OPR files first!"<<endl;
+            exit(1);
+          }
           if(auto iter = stand.child("Objecten:status"); iter)
             na.status = iter.begin()->value();
-                    
-          nums[id]=na;
+
+
+          
+          if(na.ligtIn >=0)
+            sqw.addValue({{"id", id}, {"ligtAanRef", na.ligtAan}, {"ligtInRef", na.ligtIn}, {"woonplaats", woonplaats}, {"postcode", na.postcode}, {"huisnummer", na.huisnummer}, {"huisletter", na.huisletter}, {"huistoevoeging", na.toevoeging}, {"status", na.status}}, "nums");
+          else
+            sqw.addValue({{"id", id}, {"ligtAanRef", na.ligtAan}, {"woonplaats", woonplaats}, {"postcode", na.postcode}, {"huisnummer", na.huisnummer}, {"huisletter", na.huisletter}, {"huistoevoeging", na.toevoeging}, {"status", na.status}}, "nums");
+
+            
+              //          nums[id]=na;
         }
         else if(type=="Objecten:OpenbareRuimte") {
           if(outdated(stand))
@@ -228,66 +259,16 @@ int main(int argc, char **argv)
           auto pnode=stand.select_nodes("Objecten:verkorteNaam/nen5825:VerkorteNaamOpenbareRuimte/nen5825:verkorteNaam");
           if(pnode.begin() != pnode.end()) {
             opr.verkorteNaam=pnode.begin()->node().begin()->value();
+            sqw.addValue({{"id", id}, {"naam", opr.naam}, {"verkorteNaam", opr.verkorteNaam}, {"type", opr.type}, {"ligtInRef", opr.ligtIn}}, "oprs");
           }
-
-          straatnamen[id]=opr;
+          else
+            sqw.addValue({{"id", id}, {"naam", opr.naam}, {"type", opr.type}, {"ligtInRef", opr.ligtIn}}, "oprs");
+          oprs[id]=opr;
         }
         else
           cout<<stand.name() << '\n';
       }
     }
-  }
-  for(const auto& opr: straatnamen) {
-    sqw.addValue({{"id", opr.first}, {"naam", opr.second.naam}, {"type", opr.second.type}, {"woonplaatsref", opr.second.ligtIn}}, "oprs");
-  }
-
-  for(const auto& vbo: vbos) {
-    sqw.addValue({{"id", vbo.first}, {"gebruiksdoel", vbo.second.gebruiksdoel},
-                  {"x", vbo.second.x}, {"y", vbo.second.y}, {"status", vbo.second.status},
-                  {"oppervlakte", vbo.second.oppervlakte}, {"type", vbo.second.type}}, "vbos");
-    for(const auto& num : vbo.second.nums) {
-      auto iter = nums.find(num.numid);
-      if(iter != nums.end()) {
-        iter->second.vbos.insert(vbo.first);
-        sqw.addValue({{"vbo", vbo.first}, {"num", num.numid}, {"hoofdadres", num.hoofdadres}}, "vbo_num");
-      }
-    }
-    for(const auto& pnd : vbo.second.panden) {
-      auto iter = pnds.find(pnd);
-      if(iter != pnds.end()) {
-        sqw.addValue({{"vbo", vbo.first}, {"pnd", pnd}}, "vbo_pnd");
-      }
-      else
-        cout<<"Could not find pand "<<pnd<<" from vbo "<<vbo.first<<endl;
-    }
-  }
-  for(const auto& pnd: pnds) {
-    sqw.addValue({{"id", pnd.first}, {"geo", pnd.second.geo}, {"bouwjaar", pnd.second.constructionYear}, {"status", pnd.second.status}}, "pnds");
-  }
-  for(const auto& num: nums) {
-    auto straat = straatnamen.find(num.second.ligtAan);
-    if(straat == straatnamen.end()) {
-      cerr<<"Could not find street for "<<num.first<<endl;
-      continue;
-    }
-    auto woonplaats = woonplaatsen.find(straat->second.ligtIn);
-    if(woonplaats == woonplaatsen.end()) {
-      cerr<<"Could not find woonplaats for street "<<straat->second.ligtIn<<endl;
-    }
-    cout<<straat->second.naam<<" "<<num.second.huisnummer<<num.second.huisletter<<" "<<num.second.toevoeging<<" "<<num.second.postcode<<" "<<woonplaats->second;
-    if(num.second.ligtIn >=0) {
-      woonplaats = woonplaatsen.find(num.second.ligtIn);
-      cout<<" Afwijkende stad: "<< woonplaats->second;
-    }
-    sqw.addValue({{"straat", straat->second.naam}, {"strt", straat->second.verkorteNaam}, {"oprref", num.second.ligtAan}, {"woonplaats", woonplaats->second}, {"postcode", num.second.postcode}, {"huisnummer", num.second.huisnummer}, {"huisletter", num.second.huisletter}, {"huistoevoeging", num.second.toevoeging}, {"id", num.first}, {"status", num.second.status}}, "nums");
-    for(const auto& vbo : num.second.vbos) {
-      auto iter = vbos.find(vbo);
-      if(iter != vbos.end()) {
-        cout<<" x: "<<iter->second.x<<", y: "<<iter->second.y<<", oppervlakte: "<<iter->second.oppervlakte<<", status: "<<iter->second.status<<", gebruiksdoel: "<<iter->second.gebruiksdoel;
-      }
-        
-    }
-    cout<<"\n";
   }
 }
 
