@@ -8,7 +8,8 @@ create index vbo_num_idx2 on vbo_num(vbo);
 create index vbos_id on vbos(id);
 create index pnds_id on pnds(id);
 create index nums_id on nums(id);
-create index oprs_id on nums(id);
+create index oprs_id on oprs(id);
+create index wpls_id on wpls(id);
 
 create index adridx on nums(postcode,huisnummer,huisletter,huistoevoeging);
 create index woonplaatsstraatidx on nums(woonplaats);
