@@ -5,6 +5,11 @@ This will allow you do straightforward queries to go from an address to a postco
 
 **STATUS: Very fresh, do NOT rely on this code for anything serious yet!**
 
+> Also, see this [related project](https://github.com/bartnv/xml-to-postgres/wiki/%5BNL%5D-LV-BAG-2.0-converteren)
+> from [Bart Noordervliet](https://github.com/bartnv) which implements a more
+> generic solution to convert the BAG (and other XML constructs) to PostgreSQL
+> and PostGIS.
+
 It all starts out with the tremendously detailed set of XML files from the Dutch
 land registry: [LV BAG with History](https://service.pdok.nl/lv/bag/atom/bag.xml).
 The official documentation (in Dutch) can be found on [the GitHub page of
@@ -77,7 +82,7 @@ The tables are:
  * `pnds` - `Panden` or buildings. Includes a 2D shape!
  * `nums` - `Nummeraanduidingen` - addresses, including postcode
 
-In the `mkindex` file you'll find useful views that make queryig easier.
+In the `mkindex` file you'll find useful views that make querying easier.
 
 # Some examples
 
