@@ -100,49 +100,134 @@ int main(int argc, char **argv)
   std::unordered_map<string, Pand> pnds;
   
   unsigned int count=0;
+  map<pair<string, string>, int> once;
   for(int n=1; n< argc; ++n) {
     pugi::xml_document doc;
     if (!doc.load_file(argv[n])) return -1;
 
     auto start = doc.child("sl-bag-extract:bagStand").child("sl:standBestand");
 
+    
     for(const auto& node : start) {
       const auto& deeper = node.child("sl-bag-extract:bagObject");
       for(const auto& stand : deeper) {
         string type=stand.name();
         count++;
-        if(!(count % 32768))
+        if(!(count % (32768*32)))
           cout<<count<<endl;
         if(type=="Objecten:Woonplaats") {
           if(outdated(stand))
             continue;
 
-          int id = atoi(stand.child("Objecten:identificatie").begin()->value());
-          string name = stand.child("Objecten:naam").begin()->value();
+          
+          int id; 
+          string name;
+          bool geconstateerd;
+
+          for(const auto& el : stand) {
+            string elname = el.name();
+            if(elname=="Objecten:identificatie")
+              id = atoi(el.begin()->value());
+            else if(elname=="Objecten:naam")
+              name = el.begin()->value();
+            else if(elname=="Objecten:geconstateerd")
+              geconstateerd = string(el.begin()->value())=="J";
+            else if(elname=="Objecten:geometrie" || elname=="Objecten:voorkomen")
+              ;
+            else if(!once[{type, elname}]++) {
+              cout<<"Ignoring "<<type<<" element "<<elname<<endl;
+            }
+          }
+
+          
           wpls[id]=name;
-          sqw.addValue({{"id", id}, {"naam", name}}, "wpls");
+          sqw.addValue({{"id", id}, {"naam", name}, {"geconstateerd", geconstateerd}}, "wpls");
         }
         else if(type=="Objecten:Pand") {
           if(outdated(stand))
             continue;
           Pand pnd;
-          string id = stand.child("Objecten:identificatie").begin()->value();
-          pnd.status = stand.child("Objecten:status").begin()->value();
-          pnd.constructionYear = atoi(stand.child("Objecten:oorspronkelijkBouwjaar").begin()->value());
-          auto pnode=stand.select_nodes("Objecten:geometrie/gml:Polygon/gml:exterior/gml:LinearRing/gml:posList");
-          
-          if(pnode.begin() != pnode.end()) {
-            pnd.geo = pnode.begin()->node().begin()->value();
+          string id;
+
+          for(const auto& el : stand) {
+            string elname = el.name();
+            if(elname=="Objecten:identificatie")
+              id = el.begin()->value();
+            else if(elname=="Objecten:status")
+              pnd.status = el.begin()->value();
+            else if(elname=="Objecten:oorspronkelijkBouwjaar") 
+              pnd.constructionYear = atoi(el.begin()->value());
+            else if(elname=="Objecten:geometrie") {
+              auto pnode=el.select_nodes("gml:Polygon/gml:exterior/gml:LinearRing/gml:posList");
+              
+              if(pnode.begin() != pnode.end()) {
+                pnd.geo = pnode.begin()->node().begin()->value();
+              }
+            }
+            else if(elname=="Objecten:geometrie" || elname=="Objecten:voorkomen")
+              ;
+            else if(!once[{type, elname}]++) {
+              cout<<"Ignoring "<<type<<" element "<<elname<<endl;
+            }
           }
-          sqw.addValue({{"id", id}, {"geo", pnd.geo}, {"bouwjaar", pnd.constructionYear}, {"status", pnd.status}}, "pnds");
-          //          pnds[id]=pnd;
           
+          sqw.addValue({{"id", id}, {"geo", pnd.geo}, {"bouwjaar", pnd.constructionYear}, {"status", pnd.status}}, "pnds");
         }
         else if(type=="Objecten:Verblijfsobject" || type=="Objecten:Standplaats" || type=="Objecten:Ligplaats") {
           if(outdated(stand))
             continue;
 
           VerblijfsObject vo;
+          string id;
+          for(const auto& el : stand) {
+            string elname = el.name();
+            if(elname=="Objecten:identificatie")
+              id = el.begin()->value();
+            else if(elname=="Objecten:status")
+              vo.status = el.begin()->value();
+            else if(elname=="Objecten:oppervlakte") 
+              vo.oppervlakte = atoi(el.begin()->value());
+            else if(elname=="Objecten:gebruiksdoel") 
+              vo.gebruiksdoel = el.begin()->value();
+            else if(elname=="Objecten:geometrie") {
+              auto pnode=el.select_nodes("Objecten:punt/gml:Point/gml:pos");
+              if(pnode.begin() != pnode.end()) {
+                string point = pnode.begin()->node().begin()->value();
+                vo.x = atof(point.c_str());
+                if(auto pos = point.find(' '); pos != string::npos)
+                  vo.y = atof(point.c_str() + pos + 1);
+              }
+            }
+            else if(elname=="Objecten:maaktDeelUitVan") {
+              if(auto iter = el; iter) {
+                int n=0;
+                for(const auto& el : iter) {
+                  vo.panden.insert(el.begin()->value());
+                  ++n;
+                }
+              }
+            }
+            // refers to a Nummeraanduiding
+            else if(elname=="Objecten:heeftAlsHoofdadres") {
+              int n=0;
+              for(const auto& el2 : el) {
+                vo.nums.insert({el2.begin()->value(), true});
+                ++n;
+              }
+            }
+            // refers to further Nummeraanduidingen
+            else if(elname=="Objecten:heeftAlsNevenadres") {
+              int n=0;
+              for(const auto& el2 : el) {
+                vo.nums.insert({el2.begin()->value(), false});
+                ++n;
+              }
+            }
+            else if(!once[{type, elname}]++) {
+              cout<<"Ignoring "<<type<<" element "<<elname<<endl;
+            }
+          }          
+          
           if(type=="Objecten:Verblijfsobject")
             vo.type="vbo";
           else if(type=="Objecten:Standplaats")
@@ -150,46 +235,6 @@ int main(int argc, char **argv)
           else if(type=="Objecten:Ligplaats")
             vo.type="lig";
               
-          string id = stand.child("Objecten:identificatie").begin()->value();
-          vo.status = stand.child("Objecten:status").begin()->value();
-          
-          if(stand.child("Objecten:oppervlakte"))
-            vo.oppervlakte = atoi(stand.child("Objecten:oppervlakte").begin()->value());
-          if(stand.child("Objecten:gebruiksdoel"))
-            vo.gebruiksdoel = stand.child("Objecten:gebruiksdoel").begin()->value();
-
-          auto pnode=stand.select_nodes("Objecten:geometrie/Objecten:punt/gml:Point/gml:pos");
-          if(pnode.begin() != pnode.end()) {
-            string point = pnode.begin()->node().begin()->value();
-            vo.x = atof(point.c_str());
-            if(auto pos = point.find(' '); pos != string::npos)
-              vo.y = atof(point.c_str() + pos + 1);
-          }
-          
-          if(auto iter = stand.child("Objecten:maaktDeelUitVan"); iter) {
-            int n=0;
-            for(const auto& el : iter) {
-              vo.panden.insert(el.begin()->value());
-              ++n;
-            }
-          }
-
-          // refers to a Nummeraanduiding
-          if(auto iter = stand.child("Objecten:heeftAlsHoofdadres"); iter) {
-            int n=0;
-            for(const auto& el : iter) {
-              vo.nums.insert({el.begin()->value(), true});
-              ++n;
-            }
-          }
-          // refers to further Nummeraanduidingen
-          if(auto iter = stand.child("Objecten:heeftAlsNevenadres"); iter) {
-            int n=0;
-            for(const auto& el : iter) {
-              vo.nums.insert({el.begin()->value(), false});
-              ++n;
-            }
-          }
           sqw.addValue({{"id", id}, {"gebruiksdoel", vo.gebruiksdoel},
                         {"x", vo.x}, {"y", vo.y}, {"status", vo.status},
                         {"oppervlakte", vo.oppervlakte}, {"type", vo.type}}, "vbos");
@@ -206,37 +251,41 @@ int main(int argc, char **argv)
             continue;
 
           NummerAanduiding na;
-
-          string id = stand.child("Objecten:identificatie").begin()->value();
-          na.huisnummer = atoi(stand.child("Objecten:huisnummer").begin()->value());
-          if(auto iter = stand.child("Objecten:huisletter"); iter)
-            na.huisletter = iter.begin()->value();
-          if(auto iter = stand.child("Objecten:huisnummertoevoeging"); iter)
-            na.toevoeging = iter.begin()->value();
-          if(auto iter = stand.child("Objecten:postcode"); iter)
-            na.postcode = iter.begin()->value();
-          
-          na.ligtAan = stand.child("Objecten:ligtAan").child("Objecten-ref:OpenbareRuimteRef").begin()->value();
-
           string woonplaats;
-          // overrides the street Woonplaats
-          if(auto iter = stand.child("Objecten:ligtIn"); iter) {
-            na.ligtIn = atoi(iter.child("Objecten-ref:WoonplaatsRef").begin()->value());
-            woonplaats=wpls[na.ligtIn];
+          string id;
+          for(const auto& el : stand) {
+            string elname = el.name();
+            if(elname=="Objecten:identificatie")
+              id = el.begin()->value();
+            else if(elname=="Objecten:status")
+              na.status = el.begin()->value();
+            else if(elname=="Objecten:huisnummer")
+              na.huisnummer = atoi(el.begin()->value());
+            else if(elname=="Objecten:huisletter")
+              na.huisletter = el.begin()->value();
+            else if(elname=="Objecten:huisnummertoevoeging")
+              na.toevoeging = el.begin()->value();
+            else if(elname=="Objecten:postcode")
+              na.postcode = el.begin()->value();
+            else if(elname=="Objecten:ligtAan")
+              na.ligtAan = el.child("Objecten-ref:OpenbareRuimteRef").begin()->value();
+            else if(elname=="Objecten:ligtIn") {
+              na.ligtIn = atoi(el.child("Objecten-ref:WoonplaatsRef").begin()->value());
+              woonplaats=wpls[na.ligtIn];
+            }
+            else if(!once[{type, elname}]++) {
+              cout<<"Ignoring "<<type<<" element "<<elname<<": "<<el.begin()->value()<<endl;
+            }
           }
-          else
+          if(woonplaats.empty())
             woonplaats=wpls[oprs[na.ligtAan].ligtIn];
-
+            
           if(woonplaats.empty()) {
             cout<<na.ligtAan<<endl;
             cout<<oprs[na.ligtAan].ligtIn<<endl;
             cout<<"Failure to look up woonplaats for Nummeraanduiding id "<<id<<", make sure to parse WPL and OPR files first!"<<endl;
             exit(1);
           }
-          if(auto iter = stand.child("Objecten:status"); iter)
-            na.status = iter.begin()->value();
-
-
           
           if(na.ligtIn >=0)
             sqw.addValue({{"id", id}, {"ligtAanRef", na.ligtAan}, {"ligtInRef", na.ligtIn}, {"woonplaats", woonplaats}, {"postcode", na.postcode}, {"huisnummer", na.huisnummer}, {"huisletter", na.huisletter}, {"huistoevoeging", na.toevoeging}, {"status", na.status}}, "nums");
@@ -250,19 +299,35 @@ int main(int argc, char **argv)
           if(outdated(stand))
             continue;
           OpenbareRuimte opr;
-          opr.naam = stand.child("Objecten:naam").begin()->value();
-          opr.type = stand.child("Objecten:type").begin()->value();
-          opr.ligtIn= atoi(stand.child("Objecten:ligtIn").child("Objecten-ref:WoonplaatsRef").begin()->value());
-          string id = stand.child("Objecten:identificatie").begin()->value();
-          if(auto iter = stand.child("Objecten:status"); iter)
-            opr.status = iter.begin()->value();
-          auto pnode=stand.select_nodes("Objecten:verkorteNaam/nen5825:VerkorteNaamOpenbareRuimte/nen5825:verkorteNaam");
-          if(pnode.begin() != pnode.end()) {
-            opr.verkorteNaam=pnode.begin()->node().begin()->value();
-            sqw.addValue({{"id", id}, {"naam", opr.naam}, {"verkorteNaam", opr.verkorteNaam}, {"type", opr.type}, {"ligtInRef", opr.ligtIn}}, "oprs");
+          string id;
+          for(const auto& el : stand) {
+            string elname = el.name();
+            if(elname=="Objecten:identificatie")
+              id = el.begin()->value();
+            else if(elname=="Objecten:status")
+              opr.status = el.begin()->value();
+            else if(elname=="Objecten:naam")
+              opr.naam = el.begin()->value();
+            else if(elname=="Objecten:type")
+              opr.type = el.begin()->value();
+            else if(elname=="Objecten:ligtIn")
+              opr.ligtIn = atoi(el.child("Objecten-ref:WoonplaatsRef").begin()->value());
+            else if(elname=="Objecten:verkorteNaam") {
+              auto pnode=el.select_nodes("nen5825:VerkorteNaamOpenbareRuimte/nen5825:verkorteNaam");
+              if(pnode.begin() != pnode.end()) {
+                opr.verkorteNaam=pnode.begin()->node().begin()->value();
+              }
+            }
+            else if(!once[{type, elname}]++) {
+              cout<<"Ignoring "<<type<<" element "<<elname<<endl;
+            }
           }
+
+          if(!opr.verkorteNaam.empty()) 
+            sqw.addValue({{"id", id}, {"naam", opr.naam}, {"verkorteNaam", opr.verkorteNaam}, {"type", opr.type}, {"status", opr.status}, {"ligtInRef", opr.ligtIn}}, "oprs");
           else
-            sqw.addValue({{"id", id}, {"naam", opr.naam}, {"type", opr.type}, {"ligtInRef", opr.ligtIn}}, "oprs");
+            sqw.addValue({{"id", id}, {"naam", opr.naam}, {"type", opr.type}, {"status", opr.status}, {"ligtInRef", opr.ligtIn}}, "oprs");
+          
           oprs[id]=opr;
         }
         else

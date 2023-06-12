@@ -34,7 +34,7 @@ The XML files contain data on over 30 million objects, and their relations.
 Oh, and the history. This is around 75GB of XML.
 
 # Making life simpler
-If you have downloaded and unzipped [the
+If you have downloaded and unzipped [the zip file containing zip files of the
 XML
 files](https://service.pdok.nl/lv/bag/atom/downloads/lvbag-extract-nl.zip)
 you can run the code in this repository like this:
@@ -46,7 +46,10 @@ $ ./bagconv 9999{WPL,OPR,NUM,VBO,LIG,STA,PND}*.xml > txt
 This will 1) create a text file with debugging output and 2) populate a
 database called bag.sqlite
 
-If you run `sqlite3 bag.sqlite < mkindex`,  this will add useful indexes and
+> Note: the WPL,OPR etc order is important for the tool to function
+> correctly
+
+If you run `sqlite3 bag.sqlite < mkindx`,  this will add useful indexes and
 views.
 
 This allows stuff like:
@@ -82,7 +85,7 @@ The tables are:
  * `pnds` - `Panden` or buildings. Includes a 2D shape!
  * `nums` - `Nummeraanduidingen` - addresses, including postcode
 
-In the `mkindex` file you'll find useful views that make querying easier.
+In the `mkindx` file you'll find useful views that make querying easier.
 
 # Some examples
 
@@ -147,4 +150,11 @@ Make sure you have cmake and SQLite development files installed, and then run:
 cmake .
 make
 ```
+
+# Fun testing addresses
+
+ * Binnenhof 19, 's-Gravenhage: One VBO with several addresses (Nummerindicaties)
+ * Schiedamseweg 56, Rotterdam: One VBO, one Nummerindicatie but 5 buildings
+   (PNDs)
+ * 
 
