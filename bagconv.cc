@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <set>
 #include "sqlwriter.hh"
+#include "rd2wgs84.hh"
 using namespace std;
 
 /* 
@@ -234,9 +235,10 @@ int main(int argc, char **argv)
             vo.type="sta";
           else if(type=="Objecten:Ligplaats")
             vo.type="lig";
-              
+
+          WGS84Pos wpos = rd2wgs84(vo.x, vo.y);
           sqw.addValue({{"id", id}, {"gebruiksdoel", vo.gebruiksdoel},
-                        {"x", vo.x}, {"y", vo.y}, {"status", vo.status},
+                        {"x", vo.x}, {"y", vo.y}, {"lat", wpos.lat}, {"lon", wpos.lon}, {"status", vo.status},
                         {"oppervlakte", vo.oppervlakte}, {"type", vo.type}}, "vbos");
 
           for(const auto& num : vo.nums) {

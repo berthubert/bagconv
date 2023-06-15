@@ -15,6 +15,6 @@ set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads REQUIRED)
 
-add_executable(bagconv bagconv.cc sqlwriter.cc ext/pugixml-1.13/src/pugixml.cpp)
+add_executable(bagconv bagconv.cc sqlwriter.cc rd2wgs84.cc ext/pugixml-1.13/src/pugixml.cpp)
 target_link_libraries(bagconv pthread  dl sqlite3 )
 
