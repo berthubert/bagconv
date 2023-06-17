@@ -4,8 +4,8 @@ project(bagconv VERSION 1.0
                   DESCRIPTION "csv-like storage to sqlite"
                   LANGUAGES CXX)
 
-set(CMAKE_CXX_FLAGS "-Wall -g -Wextra -O3 -Iext/pugixml-1.13/src/")
-
+set(CMAKE_CXX_FLAGS "-Wall -g -Wextra -O3")
+include_directories(ext/pugixml-1.13/src/)
 
 set(CMAKE_CXX_STANDARD 17 CACHE STRING "The C++ standard to use")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
