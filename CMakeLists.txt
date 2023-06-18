@@ -5,7 +5,7 @@ project(bagconv VERSION 1.0
                   LANGUAGES CXX)
 
 set(CMAKE_CXX_FLAGS "-Wall -g -Wextra -O3")
-include_directories(ext/pugixml-1.13/src/)
+include_directories(ext/pugixml-1.13/src/ ext/cpp-httplib-0.12.6/ ext/nlohmann/)
 
 set(CMAKE_CXX_STANDARD 17 CACHE STRING "The C++ standard to use")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -17,4 +17,8 @@ find_package(Threads REQUIRED)
 
 add_executable(bagconv bagconv.cc sqlwriter.cc rd2wgs84.cc ext/pugixml-1.13/src/pugixml.cpp)
 target_link_libraries(bagconv pthread  dl sqlite3 )
+
+
+add_executable(bagserv bagserv.cc sqlwriter.cc rd2wgs84.cc ext/pugixml-1.13/src/pugixml.cpp)
+target_link_libraries(bagserv pthread dl sqlite3 z )
 
