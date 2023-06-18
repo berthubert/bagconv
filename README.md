@@ -1,7 +1,12 @@
 # bagconv
 Convert the official Dutch building/dwelling administration into a simpler format.
+Also includes a small and fast web service for sharing this data.
 
-This will allow you do straightforward queries to go from an address to a postcode and vice-versa. You also get the coordinates of an address, and if you want, the contours of the buildings the address is in.
+These tools will allow you do straightforward queries to go from an address
+to a postcode and vice-versa.  You also get the coordinates of an address,
+and if you want, the contours of the buildings the address is in. Using
+SQLite R*Tree tables, you can also quickly go from coordinates to an
+address.
 
 **STATUS: Very fresh, do NOT rely on this code for anything serious yet!**
 
@@ -64,12 +69,13 @@ Run Time: real 0.000 user 0.000000 sys 0.000681
 (there are actually more fields which tell you the status of registrations,
 plus the BAG identifiers, but I've omitted these here).
 
-Incidentally, this is one of the tens of thousands of addresses missing from
-the 'BAG Geopackage' which you can also download from the official URL
-above. 
+Incidentally, this is an example of of the tens of thousands of addresses
+missing from the 'BAG Geopackage' which you can also download from the
+official URL above.
 
 The x and y coordinates are according to the [Dutch reference
-grid](https://nl.wikipedia.org/wiki/Rijksdriehoeksco%C3%B6rdinaten).
+grid](https://nl.wikipedia.org/wiki/Rijksdriehoeksco%C3%B6rdinaten). Also
+included in the database are WGS84 coordinates.
 
 The tables in this database correspond 1:1 to the BAG objects, where the
 relations between entities are described via the intermediate tables
@@ -152,6 +158,39 @@ Make sure you have cmake and SQLite development files installed, and then run:
 ```bash
 cmake .
 make
+```
+
+# The http server
+If you run `bagserv 2345`, you can send it the following queries:
+
+ * http://0.0.0.0:2345/7311KZ/110 - all addresses with postcode 7311KZ and
+   house number 110
+ * http://0.0.0.0:2345/7311KZ/110/A - all addresses with postcode 7311KZ and
+   house number 110 and house letter A
+ * http://0.0.0.0:2345/7311KZ - all addresses with postcode 7311KZ
+ * http://0.0.0.0:2345/52.2117344207437/5.96244253360916 - the address
+   closest to 52.2117344207437N, 5.96244253360916E (WGS84)
+
+The answer in all cases is straightforward JSON with one or more addresses
+in there:
+
+```JSON
+[
+  {
+    "bouwjaar": "1985",
+    "gebruiksdoel": "kantoorfunctie",
+    "huisletter": "",
+    "huisnummer": "110",
+    "huistoevoeging": "",
+    "lat": "52.2117344207437",
+    "lon": "5.96244253360916",
+    "num_status": "Naamgeving uitgegeven",
+    "oppervlakte": "8870",
+    "straat": "Hofstraat",
+    "vbo_status": "Verblijfsobject in gebruik",
+    "woonplaats": "Apeldoorn"
+  }
+]
 ```
 
 # Fun testing addresses
