@@ -16,7 +16,6 @@ string packResults(const vector<unordered_map<string,string>>& result)
       j[c.first]=c.second;
     arr += j;
   }
-  cout<< arr <<endl;
   return arr.dump();
 }
                   
@@ -27,7 +26,6 @@ int main(int argc, char**argv)
   std::mutex sqwlock;
   // HTTP
   httplib::Server svr;
-
 
   auto result=sqw.query("select straat,woonplaats,huisnummer,huisletter,huistoevoeging,lon,lat,gebruiksdoel,num_status,vbo_status from unilabel where postcode=? and huisnummer=?", {"2631EV", 12});
 
@@ -47,7 +45,7 @@ int main(int argc, char**argv)
       auto huisletter = (string)req.matches[3];
       if(!huisletter.empty())
         huisletter[0]=toupper(huisletter[0]);
-      
+      cout<<"Query for "<<pcode<<", "<<huisnum<<", huisletter"<<endl;
       vector<unordered_map<string,string>> result;
       {
         std::lock_guard<mutex> l(sqwlock);
@@ -66,6 +64,7 @@ int main(int argc, char**argv)
     try {
       auto pcode = req.matches[1];
       auto huisnum = req.matches[2];
+      cout<<"Query for "<<pcode<<", "<<huisnum<<endl;
       vector<unordered_map<string,string>> result;
       {
         std::lock_guard<mutex> l(sqwlock);
@@ -82,6 +81,7 @@ int main(int argc, char**argv)
   svr.Get(R"(/(\d\d\d\d[A-Z][A-Z]))", [&sqw, &sqwlock](const httplib::Request &req, httplib::Response &res) {
     try {
       auto pcode = req.matches[1];
+      cout<<"Query for "<<pcode<<endl;
       vector<unordered_map<string,string>> result;
       {
         std::lock_guard<mutex> l(sqwlock);
@@ -101,9 +101,9 @@ int main(int argc, char**argv)
       auto lonstr = (string)req.matches[2]; // "x value, between 3 and 7"
       double lat = atof(latstr.c_str());
       double lon = atof(lonstr.c_str());
-      cout<<"lat: "<<lat<<endl;
-      cout<<"lon: "<<lon<<endl;
-      
+      //      cout<<"lat: "<<lat<<endl;
+      // cout<<"lon: "<<lon<<endl;
+      cout<<"Query for "<<lat<<", "<<lon<<endl;
       vector<unordered_map<string,string>> result;
       {
         std::lock_guard<mutex> l(sqwlock);
