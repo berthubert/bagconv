@@ -45,11 +45,33 @@ int main(int argc, char**argv)
       auto huisletter = (string)req.matches[3];
       if(!huisletter.empty())
         huisletter[0]=toupper(huisletter[0]);
-      cout<<"Query for "<<pcode<<", "<<huisnum<<", huisletter"<<endl;
+      cout<<"Query for "<<pcode<<", "<<huisnum<<", "<<huisletter<<endl;
       vector<unordered_map<string,string>> result;
       {
         std::lock_guard<mutex> l(sqwlock);
-        result=sqw.query("select straat,woonplaats,huisnummer,huisletter,huistoevoeging,oppervlakte,lon,lat,gebruiksdoel,bouwjaar,num_status,vbo_status from alllabel where postcode=? and huisnummer=? and huisletter=?", {pcode, huisnum,huisletter});
+        result=sqw.query("select x as rdX, y as rdY,straat,woonplaats,huisnummer,huisletter,huistoevoeging,oppervlakte,lon,lat,gebruiksdoel,bouwjaar,num_status,vbo_status from alllabel where postcode=? and huisnummer=? and huisletter=?", {pcode, huisnum,huisletter});
+      }
+
+      res.set_content(packResults(result), "application/json");
+    }
+    catch(exception& e) {
+      cerr<<"Error: "<<e.what()<<endl;
+    }
+  });
+
+    svr.Get(R"(/(\d\d\d\d[A-Z][A-Z])/(\d+)/([a-zA-Z])/([a-zA-Z0-9]*))", [&sqw, &sqwlock](const httplib::Request &req, httplib::Response &res) {
+    try {
+      auto pcode = req.matches[1];
+      auto huisnum = req.matches[2];
+      auto huisletter = (string)req.matches[3];
+      auto huistoevoeging = (string)req.matches[4];
+      if(!huisletter.empty())
+        huisletter[0]=toupper(huisletter[0]);
+      cout<<"Query for "<<pcode<<", "<<huisnum<<", huisletter "<<huisletter<<", huistoevoeging: "<<huistoevoeging<<endl;
+      vector<unordered_map<string,string>> result;
+      {
+        std::lock_guard<mutex> l(sqwlock);
+        result=sqw.query("select x as rdX, y as rdY, straat,woonplaats,huisnummer,huisletter,huistoevoeging,oppervlakte,lon,lat,gebruiksdoel,bouwjaar,num_status,vbo_status from alllabel where postcode=? and huisnummer=? and huisletter=? and huistoevoeging=?", {pcode, huisnum,huisletter,huistoevoeging});
       }
 
       res.set_content(packResults(result), "application/json");
@@ -68,7 +90,7 @@ int main(int argc, char**argv)
       vector<unordered_map<string,string>> result;
       {
         std::lock_guard<mutex> l(sqwlock);
-        result=sqw.query("select straat,woonplaats,huisnummer,huisletter,huistoevoeging,oppervlakte,lon,lat,gebruiksdoel,bouwjaar,num_status,vbo_status from alllabel where postcode=? and huisnummer=?", {pcode, huisnum});
+        result=sqw.query("select x as rdX, y as rdY, straat,woonplaats,huisnummer,huisletter,huistoevoeging,oppervlakte,lon,lat,gebruiksdoel,bouwjaar,num_status,vbo_status from alllabel where postcode=? and huisnummer=?", {pcode, huisnum});
       }
 
       res.set_content(packResults(result), "application/json");
@@ -85,7 +107,7 @@ int main(int argc, char**argv)
       vector<unordered_map<string,string>> result;
       {
         std::lock_guard<mutex> l(sqwlock);
-        result=sqw.query("select straat,woonplaats,huisnummer,huisletter,huistoevoeging,oppervlakte,bouwjaar,lon,lat,gebruiksdoel,num_status,vbo_status from alllabel where postcode=?", {pcode});
+        result=sqw.query("select x as rdX, y as rdY,straat,woonplaats,huisnummer,huisletter,huistoevoeging,oppervlakte,bouwjaar,lon,lat,gebruiksdoel,num_status,vbo_status from alllabel where postcode=?", {pcode});
       }
       res.set_content(packResults(result), "application/json");
     }
@@ -107,7 +129,7 @@ int main(int argc, char**argv)
       vector<unordered_map<string,string>> result;
       {
         std::lock_guard<mutex> l(sqwlock);
-        result=sqw.query("select straat,woonplaats,huisnummer,huisletter,huistoevoeging,oppervlakte,bouwjaar,lon,lat,gebruiksdoel,num_status,vbo_status, (lat-?)*(lat-?)+(lon-?)*(lon-?) as deg2dist from geoindex,alllabel where alllabel.vbo_id = geoindex.vbo_id and minLat > ? and maxLat < ? and minLon > ? and maxLon < ? order by deg2dist asc limit 1", {lat, lat, lon, lon, lat-0.005, lat+0.005, lon-0.005, lon+0.005}) ;
+        result=sqw.query("select x as rdX, y as rdY,straat,woonplaats,huisnummer,huisletter,huistoevoeging,oppervlakte,bouwjaar,lon,lat,gebruiksdoel,num_status,vbo_status, (lat-?)*(lat-?)+(lon-?)*(lon-?) as deg2dist from geoindex,alllabel where alllabel.vbo_id = geoindex.vbo_id and minLat > ? and maxLat < ? and minLon > ? and maxLon < ? order by deg2dist asc limit 1", {lat, lat, lon, lon, lat-0.005, lat+0.005, lon-0.005, lon+0.005}) ;
 
       }
       res.set_content(packResults(result), "application/json");
