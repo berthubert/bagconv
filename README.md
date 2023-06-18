@@ -193,6 +193,11 @@ in there:
 ]
 ```
 
+Often, the testing instance on
+[https://berthub.eu/pcode/](https://berthub.eu/pcode/52.2117344207437/5.96244253360916) will be
+active. Send it queries like
+[https://berthub.eu/pcode/7311KZ/110](https://berthub.eu/pcode/7311KZ/110).
+
 # Fun testing addresses
 
  * Binnenhof 19, 's-Gravenhage: One VBO with several addresses (Nummerindicaties)
