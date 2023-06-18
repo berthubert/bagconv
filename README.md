@@ -80,44 +80,45 @@ The tables are:
 
  * `oprs` - public spaces, like streets and squares. 
  * `vbos` - places of dwelling, but also mooring points and mobile home
-   locations. x and y are coordinates. Also includes an indication what this
+   locations. x and y are coordinates, in the Dutch specific coordinate
+   system. Also, WGS84 latitude and longitude. In addition, includes an indication what this
    place of dwelling is for (housing, education, office etc)
  * `pnds` - `Panden` or buildings. Includes a 2D shape!
  * `nums` - `Nummeraanduidingen` - addresses, including postcode
 
 In the `mkindx` file you'll find useful views that make querying easier.
 
+# Geographical tables
+If you run the SQL in `geo-queries`, a new table gets populated using the
+SQLite R*Tree module. This table (geoindex) can be queried rapidly to find
+`vbos` within certain x and y coordinates, or within certain longitudes and
+lattitudes. Use the `vbo_id` field to find associated places of dwelling.
+
 # Some examples
 
 This gets you everything for the headquarters of the Dutch Kadaster agency, including the shape of their building:
 ```sql
-sqlite> select * from unified where straat='Hofstraat' and huisnummer=110 and woonplaats='Apeldoorn';
+sqlite> select * from alllabel where straat='Hofstraat' and huisnummer=110 and woonplaats='Apeldoorn';
         straat = Hofstraat
-          strt = 
-        oprref = 0200300022471548
-    woonplaats = Apeldoorn
-      postcode = 7311KZ
     huisnummer = 110
     huisletter = 
 huistoevoeging = 
-            id = 0200200000007079
-        status = Naamgeving uitgegeven
-           vbo = 0200010000090244
-           num = 0200200000007079
-    hoofdadres = 1
-          id:1 = 0200010000090244
-  gebruiksdoel = kantoorfunctie
+    woonplaats = Apeldoorn
+      postcode = 7311KZ
              x = 194315.783
              y = 469449.074
-      status:1 = Verblijfsobject in gebruik
+           lon = 5.96244253360916
+           lat = 52.2117344207437
    oppervlakte = 8870
-          type = vbo
-         vbo:1 = 0200010000090244
-           pnd = 0200100000001088
-          id:2 = 0200100000001088
-           geo = 194305.556 469481.503 0.0 194293.842 469472.735 0.0 194299.704 469458.128 0.0 194308.96 469435.067 0.0 194314.846 469437.415 0.0 194313.03 469441.967 0.0 194315.389 469442.923 0.0 194318.6 469438.659 0.0 194322.608 469441.677 0.0 194330.846 469447.881 0.0 194327.825 469451.891 0.0 194320.342 469461.906 0.0 194307.626 469478.806 0.0 194306.163 469480.712 0.0 194305.556 469481.503 0.0
+  gebruiksdoel = kantoorfunctie
       bouwjaar = 1985
-      status:2 = Pand in gebruik
+    num_status = Naamgeving uitgegeven
+    vbo_status = Verblijfsobject in gebruik
+      vbo_type = vbo
+        num_id = 0200200000007079
+        vbo_id = 0200010000090244
+        opr_id = 0200300022471548
+        pnd_id = 0200100000001088
 ```
 
 If you just want to get from postcode to address:
@@ -132,11 +133,13 @@ huistoevoeging =
       postcode = 7311KZ
              x = 194315.783
              y = 469449.074
+           lon = 5.96244253360916
+           lat = 52.2117344207437
    oppervlakte = 8870
   gebruiksdoel = kantoorfunctie
     num_status = Naamgeving uitgegeven
     vbo_status = Verblijfsobject in gebruik
-          type = vbo
+      vbo_type = vbo
         num_id = 0200200000007079
         vbo_id = 0200010000090244
         opr_id = 0200300022471548
@@ -156,5 +159,4 @@ make
  * Binnenhof 19, 's-Gravenhage: One VBO with several addresses (Nummerindicaties)
  * Schiedamseweg 56, Rotterdam: One VBO, one Nummerindicatie but 5 buildings
    (PNDs)
- * 
 
