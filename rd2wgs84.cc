@@ -2,6 +2,8 @@
 #include <math.h>
 
 // lifted from https://github.com/glenndehaan/rd-to-wgs84 by Glenn de Haan. Don't know where he got it from.
+// maybe https://web.archive.org/web/20061207170256/http://www.dekoepel.nl/pdf/Transformatieformules.pdf
+// also cool (in Dutch) https://io.osgeo.nl/sitecontent/events/RDMiniSeminar2016/LennardHuisman.pdf
 WGS84Pos rd2wgs84 (double x, double y)
 {
     constexpr double x0 = 155000.000;
