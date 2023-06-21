@@ -100,6 +100,13 @@ SQLite R*Tree module. This table (geoindex) can be queried rapidly to find
 `vbos` within certain x and y coordinates, or within certain longitudes and
 lattitudes. Use the `vbo_id` field to find associated places of dwelling.
 
+# Validity periods
+When comparing the output of this tool to commercial offerings or the [excellent live official database](https://bagviewer.kadaster.nl/lvbag/bag-viewer/index.html), you can find small discrepancies, mostly related to the validity period.
+
+The montly extract of the BAG pre-announces changes that will happen in the (near) future. When `emlconv` runs, it checks the validity period of all entries against the current date, and then emits to the CSV file and SQLite database data that is valid at that time. 
+
+This means that if you regenerate the CSV file and database after a few weeks, the contents will be different. Conversely, if you do not regenerate, the output created earlier will list data that is by now invalid.
+
 # Some examples
 
 This gets you everything for the headquarters of the Dutch Kadaster agency, including the shape of their building:
