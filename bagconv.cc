@@ -32,14 +32,63 @@ using namespace std;
    PND, pand or building, has date of construction, plus a shape file of the exterior. Also a status.
 */
 
-bool outdated(const pugi::xml_node& stand)
+/* <Historie:beginGeldigheid>2009-07-31</Historie:beginGeldigheid>
+   <Historie:eindGeldigheid>2018-01-01</Historie:eindGeldigheid>
+
+   or
+
+   <Historie:beginGeldigheid>2018-01-01</Historie:beginGeldigheid>
+*/
+
+
+
+// date yyyy-mm-dd
+bool currentlyActive(const pugi::xml_node& stand, const string& date, string* enddate=0)
 {
+  if(enddate)
+    enddate->clear();
   if(auto iter = stand.child("Objecten:voorkomen").child("Historie:Voorkomen"); iter) {
-    if(iter.child("Historie:eindGeldigheid")) {
+    string begin, end;
+    if(auto enditer = iter.child("Historie:eindGeldigheid")) {
+      end = enditer.begin()->value();
+    }
+    if(auto begiter = iter.child("Historie:beginGeldigheid")) {
+      begin = begiter.begin()->value();
+    }
+    if(begin.empty()) {
+      cout<<stand<<endl;
+      cout<<"begin empty?!"<<endl;
+      abort();
+    }
+    if(date < begin) {// not yet valid
+      //      cout<<"Not yet active, "<<date <<" < "<<begin<<"\n";
+      return false;
+    }
+    if(end.empty()) // no end date, so still valid
       return true;
+    if(end <= date) {// this interval expired already
+      //      cout<<"Was active from "<<begin<<" to "<<end<<", and that period expired already"<<endl;
+      return false;
+    }
+    if(!begin.empty() && !end.empty()) {
+      //      cout<<"Still active, but end is known, "<<begin << " < "<<date<<" < "<< end << endl;
+      // cout<<stand<<endl;
+      if(enddate)
+        *enddate = end;
     }
   }
-  return false;
+
+  return true;
+}
+
+static string getYYYYMMDD()
+{
+  time_t now = time(0);
+  struct tm tm;
+  localtime_r(&now, &tm);
+  char tmp[80];
+  strftime(tmp, sizeof(tmp), "%Y-%m-%d", &tm);
+  return tmp;
 }
 
 int main(int argc, char **argv)
@@ -48,6 +97,8 @@ int main(int argc, char **argv)
   SQLiteWriter sqw("bag.sqlite");
   unordered_map<int, string> wpls;
 
+  string today=getYYYYMMDD(); // you can override this for limited timetravel
+  cout<<"Reference day for history: "<<today<<endl;
   struct OpenbareRuimte
   {
     int ligtIn;
@@ -117,9 +168,9 @@ int main(int argc, char **argv)
         if(!(count % (32768*32)))
           cout<<count<<endl;
         if(type=="Objecten:Woonplaats") {
-          if(outdated(stand))
+          string enddate;
+          if(!currentlyActive(stand, today, &enddate))
             continue;
-
           
           int id; 
           string name;
@@ -145,8 +196,10 @@ int main(int argc, char **argv)
           sqw.addValue({{"id", id}, {"naam", name}, {"geconstateerd", geconstateerd}}, "wpls");
         }
         else if(type=="Objecten:Pand") {
-          if(outdated(stand))
+          string enddate;
+          if(!currentlyActive(stand, today, &enddate))
             continue;
+
           Pand pnd;
           string id;
 
@@ -171,11 +224,12 @@ int main(int argc, char **argv)
               cout<<"Ignoring "<<type<<" element "<<elname<<endl;
             }
           }
-          
+          // possibly store enddate here
           sqw.addValue({{"id", id}, {"geo", pnd.geo}, {"bouwjaar", pnd.constructionYear}, {"status", pnd.status}}, "pnds");
         }
         else if(type=="Objecten:Verblijfsobject" || type=="Objecten:Standplaats" || type=="Objecten:Ligplaats") {
-          if(outdated(stand))
+          string enddate;
+          if(!currentlyActive(stand, today, &enddate))
             continue;
 
           VerblijfsObject vo;
@@ -236,6 +290,7 @@ int main(int argc, char **argv)
           else if(type=="Objecten:Ligplaats")
             vo.type="lig";
 
+          // possibly store enddate
           WGS84Pos wpos = rd2wgs84(vo.x, vo.y);
           sqw.addValue({{"id", id}, {"gebruiksdoel", vo.gebruiksdoel},
                         {"x", vo.x}, {"y", vo.y}, {"lat", wpos.lat}, {"lon", wpos.lon}, {"status", vo.status},
@@ -249,7 +304,8 @@ int main(int argc, char **argv)
           }
         }
         else if(type=="Objecten:Nummeraanduiding") {
-          if(outdated(stand))
+          string enddate;
+          if(!currentlyActive(stand, today, &enddate))
             continue;
 
           NummerAanduiding na;
@@ -288,7 +344,7 @@ int main(int argc, char **argv)
             cout<<"Failure to look up woonplaats for Nummeraanduiding id "<<id<<", make sure to parse WPL and OPR files first!"<<endl;
             exit(1);
           }
-          
+          // possibly store enddate
           if(na.ligtIn >=0)
             sqw.addValue({{"id", id}, {"ligtAanRef", na.ligtAan}, {"ligtInRef", na.ligtIn}, {"woonplaats", woonplaats}, {"postcode", na.postcode}, {"huisnummer", na.huisnummer}, {"huisletter", na.huisletter}, {"huistoevoeging", na.toevoeging}, {"status", na.status}}, "nums");
           else
@@ -298,7 +354,8 @@ int main(int argc, char **argv)
               //          nums[id]=na;
         }
         else if(type=="Objecten:OpenbareRuimte") {
-          if(outdated(stand))
+          string enddate;
+          if(!currentlyActive(stand, today, &enddate))
             continue;
           OpenbareRuimte opr;
           string id;
@@ -325,6 +382,7 @@ int main(int argc, char **argv)
             }
           }
 
+          // possibly store enddate here
           if(!opr.verkorteNaam.empty()) 
             sqw.addValue({{"id", id}, {"naam", opr.naam}, {"verkorteNaam", opr.verkorteNaam}, {"type", opr.type}, {"status", opr.status}, {"ligtInRef", opr.ligtIn}}, "oprs");
           else
