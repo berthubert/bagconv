@@ -8,12 +8,12 @@ and if you want, the contours of the buildings the address is in. Using
 SQLite R*Tree tables, you can also quickly go from coordinates to an
 address.
 
-**STATUS: Very fresh, do NOT rely on this code for anything serious yet!**
+**STATUS: Pretty fresh, do NOT rely on this code without checking if it does what you want**
 
 > Also, see this [related project](https://github.com/bartnv/xml-to-postgres/wiki/%5BNL%5D-LV-BAG-2.0-converteren)
 > from [Bart Noordervliet](https://github.com/bartnv) which implements a more
 > generic solution to convert the BAG (and other XML constructs) to PostgreSQL
-> and PostGIS.
+> and PostGIS. Jan Derk [also wrote a tool](https://github.com/digitaldutch/BAG_parser) (in Python) that converts the BAG XML to SQLite.
 
 It all starts out with the tremendously detailed set of XML files from the Dutch
 land registry: [LV BAG with History](https://service.pdok.nl/lv/bag/atom/bag.xml).
@@ -106,6 +106,13 @@ When comparing the output of this tool to commercial offerings or the [excellent
 The montly extract of the BAG pre-announces changes that will happen in the (near) future. When `emlconv` runs, it checks the validity period of all entries against the current date, and then emits to the CSV file and SQLite database data that is valid at that time. 
 
 This means that if you regenerate the CSV file and database after a few weeks, the contents will be different. Conversely, if you do not regenerate, the output created earlier will list data that is by now invalid.
+
+Addresses which have existed, but are no longer valid, or addresses which will exist, are stored in `inactnums`.
+
+# Some painful words on case
+In the database, houseletters can be both lowercase and uppercase. Some streets even have both upper and lower case letters. Users of addresses are mostly not aware if an address has an upper or lower case letter. However, the lower and upper case are officially different. 
+
+To deal with this, the sqlite database is provisioned with 'collate nocase' for huisletter and huistoevoeging (the additional extra field). This means that lookups for `huisletter='a'` and `huisletter='A'` deliver the same result. 
 
 # Some examples
 
