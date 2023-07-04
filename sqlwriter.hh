@@ -6,7 +6,7 @@
 #include <mutex>
 #include <thread>
 #include <iostream>
-
+#include <map>
 struct sqlite3;
 struct sqlite3_stmt;
 
@@ -16,7 +16,7 @@ public:
   MiniSQLite(std::string_view fname);
   ~MiniSQLite();
   std::vector<std::pair<std::string, std::string>> getSchema(const std::string& table);
-  void addColumn(const std::string& table, std::string_view name, std::string_view type);
+  void addColumn(const std::string& table, std::string_view name, std::string_view type, const std::string& meta=std::string());
   std::vector<std::vector<std::string>> exec(std::string_view query);
   void prepare(const std::string& table, std::string_view str);
   void bindPrep(const std::string& table, int idx, bool value);
@@ -53,11 +53,12 @@ class SQLiteWriter
 {
 
 public:
-  explicit SQLiteWriter(std::string_view fname) : d_db(fname)
+  explicit SQLiteWriter(std::string_view fname, const std::map<std::string,std::string>& meta = std::map<std::string,std::string>() ) : d_db(fname)
   {
     d_db.exec("PRAGMA journal_mode='wal'");
     d_db.begin(); // open the transaction
     d_thread = std::thread(&SQLiteWriter::commitThread, this);
+    d_meta = meta;
   }
   typedef std::variant<double, int32_t, uint32_t, int64_t, std::string> var_t;
   void addValue(const std::initializer_list<std::pair<const char*, var_t>>& values, const std::string& table="data");
@@ -84,4 +85,5 @@ private:
   std::unordered_map<std::string, std::vector<std::pair<std::string, std::string>>> d_columns;
   std::unordered_map<std::string, std::vector<std::string>> d_lastsig;
   bool haveColumn(const std::string& table, std::string_view name);
+  std::map<std::string, std::string> d_meta;
 };

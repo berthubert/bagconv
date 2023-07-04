@@ -129,19 +129,19 @@ bool MiniSQLite::haveTable(const string& table)
 
 
 //! Add a column to a table with a certain type
-void MiniSQLite::addColumn(const string& table, string_view name, string_view type)
+void MiniSQLite::addColumn(const string& table, string_view name, string_view type, const std::string& meta)
 {
   // SECURITY PROBLEM - somehow we can't do prepared statements here
   
   if(!haveTable(table)) {
 #if SQLITE_VERSION_NUMBER >= 3037001
-    exec("create table if not exists '"+table+"' ( '"+(string)name+"' "+(string)type+" ) STRICT");
+    exec("create table if not exists '"+table+"' ( '"+(string)name+"' "+(string)type+" "+meta+") STRICT");
 #else
-    exec("create table if not exists '"+table+"' ( '"+(string)name+"' "+(string)type+" )");
+    exec("create table if not exists '"+table+"' ( '"+(string)name+"' "+(string)type+" "+ meta+")");
 #endif
   } else {
     //    cout<<"Adding column "<<name<<" to table "<<table<<endl;
-    exec("ALTER table \""+table+"\" add column \""+string(name)+ "\" "+string(type));
+    exec("ALTER table \""+table+"\" add column \""+string(name)+ "\" "+string(type)+ " "+meta);
   }
 }
 
@@ -206,14 +206,14 @@ void SQLiteWriter::addValueGeneric(const std::string& table, const T& values)
     for(const auto& p : values) {
       if(!haveColumn(table, p.first)) {
         if(std::get_if<double>(&p.second)) {
-          d_db.addColumn(table, p.first, "REAL");
+          d_db.addColumn(table, p.first, "REAL", d_meta[p.first]);
           d_columns[table].push_back({p.first, "REAL"});
         }
         else if(std::get_if<string>(&p.second)) {
-          d_db.addColumn(table, p.first, "TEXT");
+          d_db.addColumn(table, p.first, "TEXT", d_meta[p.first]);
           d_columns[table].push_back({p.first, "TEXT"});
         } else  {
-          d_db.addColumn(table, p.first, "INT");
+          d_db.addColumn(table, p.first, "INT", d_meta[p.first]);
           d_columns[table].push_back({p.first, "INT"});
         }
 
