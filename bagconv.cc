@@ -43,10 +43,12 @@ using namespace std;
 
 
 // date yyyy-mm-dd
-bool currentlyActive(const pugi::xml_node& stand, const string& date, string* enddate=0)
+bool currentlyActive(const pugi::xml_node& stand, const string& date, string* enddate=0, string* begindate=0)
 {
   if(enddate)
     enddate->clear();
+  if(begindate)
+    begindate->clear();
   if(auto iter = stand.child("Objecten:voorkomen").child("Historie:Voorkomen"); iter) {
     string begin, end;
     if(auto enditer = iter.child("Historie:eindGeldigheid")) {
@@ -60,6 +62,11 @@ bool currentlyActive(const pugi::xml_node& stand, const string& date, string* en
       cout<<"begin empty?!"<<endl;
       abort();
     }
+    if(begindate)
+      *begindate = begin;
+    if(enddate)
+      *enddate = end;
+          
     if(date < begin) {// not yet valid
       //      cout<<"Not yet active, "<<date <<" < "<<begin<<"\n";
       return false;
@@ -73,8 +80,7 @@ bool currentlyActive(const pugi::xml_node& stand, const string& date, string* en
     if(!begin.empty() && !end.empty()) {
       //      cout<<"Still active, but end is known, "<<begin << " < "<<date<<" < "<< end << endl;
       // cout<<stand<<endl;
-      if(enddate)
-        *enddate = end;
+      return true;
     }
   }
 
@@ -94,7 +100,7 @@ static string getYYYYMMDD()
 int main(int argc, char **argv)
 {
   unlink("bag.sqlite");
-  SQLiteWriter sqw("bag.sqlite");
+  SQLiteWriter sqw("bag.sqlite", {{"huisletter", "collate nocase"}, {"huistoevoeging", "collate nocase"}});
   unordered_map<int, string> wpls;
 
   string today=getYYYYMMDD(); // you can override this for limited timetravel
@@ -304,9 +310,7 @@ int main(int argc, char **argv)
           }
         }
         else if(type=="Objecten:Nummeraanduiding") {
-          string enddate;
-          if(!currentlyActive(stand, today, &enddate))
-            continue;
+          string enddate, begindate;
 
           NummerAanduiding na;
           string woonplaats;
@@ -344,14 +348,21 @@ int main(int argc, char **argv)
             cout<<"Failure to look up woonplaats for Nummeraanduiding id "<<id<<", make sure to parse WPL and OPR files first!"<<endl;
             exit(1);
           }
+
+          if(!currentlyActive(stand, today, &enddate, &begindate)) {
+            if(na.ligtIn >=0)
+              sqw.addValue({{"id", id}, {"ligtAanRef", na.ligtAan}, {"ligtInRef", na.ligtIn}, {"woonplaats", woonplaats}, {"postcode", na.postcode}, {"huisnummer", na.huisnummer}, {"huisletter", na.huisletter}, {"huistoevoeging", na.toevoeging}, {"status", na.status}, {"begindate", begindate}, {"enddate", enddate}}, "inactnums");
+          else
+            sqw.addValue({{"id", id}, {"ligtAanRef", na.ligtAan}, {"woonplaats", woonplaats}, {"postcode", na.postcode}, {"huisnummer", na.huisnummer}, {"huisletter", na.huisletter}, {"huistoevoeging", na.toevoeging}, {"status", na.status}, {"begindate", begindate}, {"enddate", enddate}}, "inactnums");
+
+          }
+          else {
           // possibly store enddate
           if(na.ligtIn >=0)
             sqw.addValue({{"id", id}, {"ligtAanRef", na.ligtAan}, {"ligtInRef", na.ligtIn}, {"woonplaats", woonplaats}, {"postcode", na.postcode}, {"huisnummer", na.huisnummer}, {"huisletter", na.huisletter}, {"huistoevoeging", na.toevoeging}, {"status", na.status}}, "nums");
           else
             sqw.addValue({{"id", id}, {"ligtAanRef", na.ligtAan}, {"woonplaats", woonplaats}, {"postcode", na.postcode}, {"huisnummer", na.huisnummer}, {"huisletter", na.huisletter}, {"huistoevoeging", na.toevoeging}, {"status", na.status}}, "nums");
-
-            
-              //          nums[id]=na;
+          }
         }
         else if(type=="Objecten:OpenbareRuimte") {
           string enddate;
