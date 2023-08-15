@@ -45,10 +45,10 @@ download_if_new_bag_dump_is_expected()
         return
     fi
 
-    if (( 10#cur_month > 10#dump_month && 10#cur_day >= 8)); then
+    if (( 10#$cur_month > 10#$dump_month && 10#$cur_day >= 8)); then
         echo "Expecting a new dump to be available, downloading..."
         download_latest_bag_dump
-    elif (( 10#cur_month == 10#dump_month && 10#cur_day > 10#dump_day && 10#cur_day >= 8)); then
+    elif (( 10#$cur_month == 10#$dump_month && 10#$cur_day > 10#$dump_day && 10#$cur_day >= 8)); then
         echo "Expecting a new dump to be available, downloading..."
         download_latest_bag_dump
     else
