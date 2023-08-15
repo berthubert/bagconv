@@ -53,6 +53,7 @@ download_if_new_bag_dump_is_expected()
         download_latest_bag_dump
     else
         echo "No new BAG is available, not downloading again."
+        exit
     fi
 }
 
