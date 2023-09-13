@@ -25,8 +25,8 @@ RUN wget https://service.pdok.nl/lv/bag/atom/downloads/lvbag-extract-nl.zip \
 
 FROM base as server
 WORKDIR /srv
-RUN apt purge -y wget wget build-essential cmake
-COPY --from=builder --chown=baguser:baguser /build/bagconv /build/bagserv .
+RUN chown baguser:baguser /srv && apt purge -y wget wget build-essential cmake
+COPY --from=builder --chown=baguser:baguser /build/bagconv /build/bagserv ./
 COPY --from=bagger --chown=baguser:baguser /bagger/bag.sqlite .
 USER baguser
 CMD ["/srv/bagserv", "1234"]
