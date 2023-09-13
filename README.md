@@ -218,3 +218,44 @@ active. Send it queries like
  * Schiedamseweg 56, Rotterdam: One VBO, one Nummerindicatie but 5 buildings
    (PNDs)
 
+# Docker
+Building the Docker image requires at least 120GB of free disk space 
+during build time and can take around 15 minutes to build. Please
+make sure you are using a [recent](https://docs.docker.com/desktop/install/linux-install/) 
+Docker engine version (for example 24.0.5 or newer).
+
+```
+$ docker build -t bagconv:latest --compress .
+$ docker run -p 1234:1234 bagconv:latest
+
+$ curl -s http://127.0.0.1:1234/7311KZ/110 | jq
+[
+  {
+    "bouwjaar": "1985",
+    "gebruiksdoel": "kantoorfunctie",
+    "huisletter": "",
+    "huisnummer": "110",
+    "huistoevoeging": "",
+    "lat": "52.2117344207437",
+    "lon": "5.96244253360916",
+    "num_status": "Naamgeving uitgegeven",
+    "oppervlakte": "8870",
+    "rdX": "194315.783",
+    "rdY": "469449.074",
+    "straat": "Hofstraat",
+    "vbo_status": "Verblijfsobject in gebruik",
+    "woonplaats": "Apeldoorn"
+  }
+]
+```
+
+To clean up build artifacts you can (after running `docker run bagconv:latest` at least once)
+run the following command. Warning: this will remove all cache and dangling images and 
+containers from your host. This should free up approximately 120GB of space on your machine.
+
+```
+docker system prune -af
+```
+
+If you have any suggestions on how to further minimize the resulting Docker image size,
+feel free to contribute!
