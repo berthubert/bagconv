@@ -9,23 +9,24 @@ RUN --mount=type=cache,target=/build/CMakeFiles cmake . && make
 
 FROM builder as bagger
 WORKDIR /bagger
-RUN --mount=type=cache,target=/bagger wget https://service.pdok.nl/lv/bag/atom/downloads/lvbag-extract-nl.zip \
-      --no-verbose --show-progress \
-      --progress=dot:giga \
-      -O lvbag-extract-nl.zip
-RUN unzip -o lvbag-extract-nl.zip
 SHELL ["/bin/bash", "-c"]
-RUN echo 9999{WPL,OPR,NUM,VBO,LIG,STA,PND}*.zip | xargs -n1 -P8 unzip
-RUN /build/bagconv 9999{WPL,OPR,NUM,VBO,LIG,STA,PND}*.xml
-RUN sqlite3 bag.sqlite < /build/mkindx
-# Uncomment to build additional views.
-# RUN sqlite3 bag.sqlite < /build/geo-queries 
+RUN wget https://service.pdok.nl/lv/bag/atom/downloads/lvbag-extract-nl.zip \
+    --no-verbose --show-progress --progress=dot:giga && \
+    unzip -o lvbag-extract-nl.zip && rm lvbag-extract-nl.zip && \
+    # unzip the zips containing zips
+    find . -name "*.zip" | xargs -P8 -I{} bash -c "unzip {} && rm {}" && \
+    # unzip the zips containing xmls
+    find . -name "*.zip" | xargs -P8 -I{} bash -c "unzip {} && rm {}" && \
+    /build/bagconv 9999{WPL,OPR,NUM,VBO,LIG,STA,PND}*.xml && \
+    rm *.xml && \
+    sqlite3 bag.sqlite < /build/mkindx
+    # Uncomment to build additional views.
+    # sqlite3 bag.sqlite < /build/geo-queries
 
 FROM base as server
 WORKDIR /srv
-RUN apt purge -y wget unzip build-essential cmake
-COPY --from=builder /build/bagconv /build/bagserv .
-COPY --from=bagger /bagger/bag.sqlite .
-RUN chown baguser:baguser -R .
+RUN apt purge -y wget wget build-essential cmake
+COPY --from=builder --chown=baguser:baguser /build/bagconv /build/bagserv .
+COPY --from=bagger --chown=baguser:baguser /bagger/bag.sqlite .
 USER baguser
 CMD ["/srv/bagserv", "1234"]
