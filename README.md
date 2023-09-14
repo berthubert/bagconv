@@ -220,12 +220,14 @@ active. Send it queries like
 
 # Docker
 Building the Docker image requires at least 120GB of free disk space 
-during build time and can take around 15 minutes to build. Please
-make sure you are using a [recent](https://docs.docker.com/desktop/install/linux-install/) 
+during build time and can take up to 15 minutes to build. The resulting
+`bag.sqlite` and docker image combined will be approximately 10GB in size.
+
+Please make sure you are using a [recent](https://docs.docker.com/desktop/install/linux-install/) 
 Docker engine version (for example 24.0.5 or newer).
 
 ```
-$ docker build -t bagconv:latest --compress .
+$ docker build -t bagconv:latest .
 $ docker run -p 1234:1234 bagconv:latest
 
 $ curl -s http://127.0.0.1:1234/7311KZ/110 | jq
@@ -249,13 +251,10 @@ $ curl -s http://127.0.0.1:1234/7311KZ/110 | jq
 ]
 ```
 
-To clean up build artifacts you can (after running `docker run bagconv:latest` at least once)
-run the following command. Warning: this will remove all cache and dangling images and 
-containers from your host. This should free up approximately 120GB of space on your machine.
+To clean up build artifacts you can (after running `docker run bagconv:latest` at least once) 
+run the following command. Warning: this will remove all cache and dangling images and containers 
+from your host. This should free up approximately 110GB of space on your machine.
 
 ```
-docker system prune -af
+docker system prune
 ```
-
-If you have any suggestions on how to further minimize the resulting Docker image size,
-feel free to contribute!
