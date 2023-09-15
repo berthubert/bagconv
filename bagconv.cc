@@ -6,6 +6,7 @@
 #include <set>
 #include "sqlwriter.hh"
 #include "rd2wgs84.hh"
+#include "json.hpp"
 using namespace std;
 
 /* 
@@ -131,7 +132,7 @@ int main(int argc, char **argv)
     string status;
     set<string> panden;
     set<VboNumKoppeling> nums;
-    string gebruiksdoel;
+    set<string> gebruiksdoelen;
     string type;
     double x{-1}, y{-1};
   };
@@ -248,8 +249,8 @@ int main(int argc, char **argv)
               vo.status = el.begin()->value();
             else if(elname=="Objecten:oppervlakte") 
               vo.oppervlakte = atoi(el.begin()->value());
-            else if(elname=="Objecten:gebruiksdoel") 
-              vo.gebruiksdoel = el.begin()->value();
+            else if(elname=="Objecten:gebruiksdoel")  
+              vo.gebruiksdoelen.insert(el.begin()->value());
             else if(elname=="Objecten:geometrie") {
               auto pnode=el.select_nodes("Objecten:punt/gml:Point/gml:pos");
               if(pnode.begin() != pnode.end()) {
@@ -298,7 +299,12 @@ int main(int argc, char **argv)
 
           // possibly store enddate
           WGS84Pos wpos = rd2wgs84(vo.x, vo.y);
-          sqw.addValue({{"id", id}, {"gebruiksdoel", vo.gebruiksdoel},
+          nlohmann::json arr = nlohmann::json::array();
+          for(const auto& g : vo.gebruiksdoelen) {
+            arr += g;
+          }
+          string gebruiksdoelen = arr.dump();
+          sqw.addValue({{"id", id}, {"gebruiksdoelen", gebruiksdoelen},
                         {"x", vo.x}, {"y", vo.y}, {"lat", wpos.lat}, {"lon", wpos.lon}, {"status", vo.status},
                         {"oppervlakte", vo.oppervlakte}, {"type", vo.type}}, "vbos");
 

@@ -8,7 +8,7 @@ and if you want, the contours of the buildings the address is in. Using
 SQLite R*Tree tables, you can also quickly go from coordinates to an
 address.
 
-**STATUS: Pretty fresh, do NOT rely on this code without checking if it does what you want**
+**STATUS: Pretty fresh - if you use this in production, do let me know (bert@hubertnet.nl)**
 
 > Also, see this [related project](https://github.com/bartnv/xml-to-postgres/wiki/%5BNL%5D-LV-BAG-2.0-converteren)
 > from [Bart Noordervliet](https://github.com/bartnv) which implements a more
@@ -130,7 +130,7 @@ huistoevoeging =
            lon = 5.96244253360916
            lat = 52.2117344207437
    oppervlakte = 8870
-  gebruiksdoel = kantoorfunctie
+gebruiksdoelen = ["kantoorfunctie"]
       bouwjaar = 1985
     num_status = Naamgeving uitgegeven
     vbo_status = Verblijfsobject in gebruik
@@ -156,7 +156,7 @@ huistoevoeging =
            lon = 5.96244253360916
            lat = 52.2117344207437
    oppervlakte = 8870
-  gebruiksdoel = kantoorfunctie
+gebruiksdoelen = ["kantoorfunctie"]
     num_status = Naamgeving uitgegeven
     vbo_status = Verblijfsobject in gebruik
       vbo_type = vbo
@@ -192,7 +192,7 @@ in there:
 [
   {
     "bouwjaar": "1985",
-    "gebruiksdoel": "kantoorfunctie",
+    "gebruiksdoelen": ["kantoorfunctie"],
     "huisletter": "",
     "huisnummer": "110",
     "huistoevoeging": "",
@@ -234,7 +234,7 @@ $ curl -s http://127.0.0.1:1234/7311KZ/110 | jq
 [
   {
     "bouwjaar": "1985",
-    "gebruiksdoel": "kantoorfunctie",
+    "gebruiksdoelen": ["kantoorfunctie"],
     "huisletter": "",
     "huisnummer": "110",
     "huistoevoeging": "",

@@ -1,5 +1,5 @@
 #!/bin/bash
-# wget https://service.pdok.nl/lv/bag/atom/downloads/lvbag-extract-nl.zip
+wget https://service.pdok.nl/lv/bag/atom/downloads/lvbag-extract-nl.zip
 rm -rf bag
 mkdir bag
 cd bag

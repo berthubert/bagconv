@@ -12,8 +12,15 @@ string packResults(const vector<unordered_map<string,string>>& result)
   
   for(const auto& r : result) {
     nlohmann::json j;
-    for(const auto& c : r)
-      j[c.first]=c.second;
+    for(const auto& c : r) {
+      if(c.first == "gebruiksdoelen") {
+        // parse and store as array
+        nlohmann::json ex1 = nlohmann::json::parse(c.second);
+        j[c.first]=ex1;
+      }
+      else 
+        j[c.first]=c.second;
+    }
     arr += j;
   }
   return arr.dump();
@@ -27,18 +34,23 @@ int main(int argc, char**argv)
   // HTTP
   httplib::Server svr;
 
-  auto result=sqw.query("select straat,woonplaats,huisnummer,huisletter,huistoevoeging,lon,lat,gebruiksdoel,num_status,vbo_status from unilabel where postcode=? and huisnummer=?", {"2631EV", 12});
+  svr.set_mount_point("/", "./html/");
 
-  for(auto& r : result) {
-    for(const auto& c : r)
-      cout<<c.second<<" ";
-    cout<<endl;
-    cout<< r["gebruiksdoel"]<<endl;
-  }
+    struct LockedSqw
+  {
+    SQLiteWriter& sqw;
+    std::mutex& sqwlock;
+    vector<unordered_map<string,string>> query(const std::string& query, const std::initializer_list<SQLiteWriter::var_t>& values)
+    {
+      std::lock_guard<mutex> l(sqwlock);
+      return sqw.query(query, values);
+    }
+  };
+  LockedSqw lsqw{sqw, sqwlock};
 
   // SQW IS NOT IN ANY WAY THREAD SAFE SO DO NOT FORGET THE LOCK!!
 
-  svr.Get(R"(/(\d\d\d\d[A-Z][A-Z])/(\d+)/([a-zA-Z]))", [&sqw, &sqwlock](const httplib::Request &req, httplib::Response &res) {
+  svr.Get(R"(/(\d\d\d\d[A-Z][A-Z])/(\d+)/([a-zA-Z]))", [&lsqw](const httplib::Request &req, httplib::Response &res) {
     try {
       auto pcode = req.matches[1];
       auto huisnum = req.matches[2];
@@ -46,11 +58,7 @@ int main(int argc, char**argv)
       if(!huisletter.empty())
         huisletter[0]=toupper(huisletter[0]);
       cout<<"Query for "<<pcode<<", "<<huisnum<<", "<<huisletter<<endl;
-      vector<unordered_map<string,string>> result;
-      {
-        std::lock_guard<mutex> l(sqwlock);
-        result=sqw.query("select x as rdX, y as rdY,straat,woonplaats,huisnummer,huisletter,huistoevoeging,oppervlakte,lon,lat,gebruiksdoel,bouwjaar,num_status,vbo_status from alllabel where postcode=? and huisnummer=? and huisletter=?", {pcode, huisnum,huisletter});
-      }
+      auto result = lsqw.query("select x as rdX, y as rdY,straat,woonplaats,huisnummer,huisletter,huistoevoeging,oppervlakte,lon,lat,gebruiksdoelen,bouwjaar,num_status,vbo_status from alllabel where postcode=? and huisnummer=? and huisletter=?", {pcode, huisnum,huisletter});
 
       res.set_content(packResults(result), "application/json");
     }
@@ -71,7 +79,7 @@ int main(int argc, char**argv)
       vector<unordered_map<string,string>> result;
       {
         std::lock_guard<mutex> l(sqwlock);
-        result=sqw.query("select x as rdX, y as rdY, straat,woonplaats,huisnummer,huisletter,huistoevoeging,oppervlakte,lon,lat,gebruiksdoel,bouwjaar,num_status,vbo_status from alllabel where postcode=? and huisnummer=? and huisletter=? and huistoevoeging=?", {pcode, huisnum,huisletter,huistoevoeging});
+        result=sqw.query("select x as rdX, y as rdY, straat,woonplaats,huisnummer,huisletter,huistoevoeging,oppervlakte,lon,lat,gebruiksdoelen,bouwjaar,num_status,vbo_status from alllabel where postcode=? and huisnummer=? and huisletter=? and huistoevoeging=?", {pcode, huisnum,huisletter,huistoevoeging});
       }
 
       res.set_content(packResults(result), "application/json");
@@ -90,7 +98,7 @@ int main(int argc, char**argv)
       vector<unordered_map<string,string>> result;
       {
         std::lock_guard<mutex> l(sqwlock);
-        result=sqw.query("select x as rdX, y as rdY, straat,woonplaats,huisnummer,huisletter,huistoevoeging,oppervlakte,lon,lat,gebruiksdoel,bouwjaar,num_status,vbo_status from alllabel where postcode=? and huisnummer=?", {pcode, huisnum});
+        result=sqw.query("select x as rdX, y as rdY, straat,woonplaats,huisnummer,huisletter,huistoevoeging,oppervlakte,lon,lat,gebruiksdoelen,bouwjaar,num_status,vbo_status from alllabel where postcode=? and huisnummer=?", {pcode, huisnum});
       }
 
       res.set_content(packResults(result), "application/json");
@@ -107,7 +115,7 @@ int main(int argc, char**argv)
       vector<unordered_map<string,string>> result;
       {
         std::lock_guard<mutex> l(sqwlock);
-        result=sqw.query("select x as rdX, y as rdY,straat,woonplaats,huisnummer,huisletter,huistoevoeging,oppervlakte,bouwjaar,lon,lat,gebruiksdoel,num_status,vbo_status from alllabel where postcode=?", {pcode});
+        result=sqw.query("select x as rdX, y as rdY,straat,woonplaats,huisnummer,huisletter,huistoevoeging,oppervlakte,bouwjaar,lon,lat,gebruiksdoelen,num_status,vbo_status from alllabel where postcode=?", {pcode});
       }
       res.set_content(packResults(result), "application/json");
     }
@@ -129,7 +137,7 @@ int main(int argc, char**argv)
       vector<unordered_map<string,string>> result;
       {
         std::lock_guard<mutex> l(sqwlock);
-        result=sqw.query("select x as rdX, y as rdY,straat,woonplaats,huisnummer,huisletter,huistoevoeging,oppervlakte,bouwjaar,lon,lat,gebruiksdoel,num_status,vbo_status, (lat-?)*(lat-?)+(lon-?)*(lon-?) as deg2dist from geoindex,alllabel where alllabel.vbo_id = geoindex.vbo_id and minLat > ? and maxLat < ? and minLon > ? and maxLon < ? order by deg2dist asc limit 1", {lat, lat, lon, lon, lat-0.005, lat+0.005, lon-0.005, lon+0.005}) ;
+        result=sqw.query("select x as rdX, y as rdY,straat,woonplaats,huisnummer,huisletter,huistoevoeging,oppervlakte,bouwjaar,lon,lat,gebruiksdoelen,num_status,vbo_status, (lat-?)*(lat-?)+(lon-?)*(lon-?) as deg2dist from geoindex,alllabel where alllabel.vbo_id = geoindex.vbo_id and minLat > ? and maxLat < ? and minLon > ? and maxLon < ? order by deg2dist asc limit 1", {lat, lat, lon, lon, lat-0.005, lat+0.005, lon-0.005, lon+0.005}) ;
 
       }
       res.set_content(packResults(result), "application/json");
