@@ -72,10 +72,10 @@ public:
     d_thread.join();
   }
 
-  template<typename T>
-  std::vector<std::unordered_map<std::string,std::string>> queryGen(const std::string& q, const T& values);
-  
-  std::vector<std::unordered_map<std::string,std::string>> query(const std::string& q, const std::initializer_list<var_t>& values);  
+  // This is an odd function for a writer - it allows you to do simple queries & get back result as a vector of maps
+  // note that this function is may very well NOT be coherent with addValue
+  // this function is useful for getting values of counters before logging for example
+  std::vector<std::unordered_map<std::string,std::string>> query(const std::string& q, const std::initializer_list<var_t>& values = std::initializer_list<var_t>());  
 private:
   void commitThread();
   bool d_pleasequit{false};
@@ -84,6 +84,9 @@ private:
   MiniSQLite d_db;
   std::unordered_map<std::string, std::vector<std::pair<std::string, std::string>>> d_columns;
   std::unordered_map<std::string, std::vector<std::string>> d_lastsig;
-  bool haveColumn(const std::string& table, std::string_view name);
   std::map<std::string, std::string> d_meta;
+
+  bool haveColumn(const std::string& table, std::string_view name);
+  template<typename T>
+  std::vector<std::unordered_map<std::string,std::string>> queryGen(const std::string& q, const T& values);
 };
