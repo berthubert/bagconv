@@ -98,6 +98,18 @@ static string getYYYYMMDD()
   return tmp;
 }
 
+// written by ChatGPT!
+vector<string> split_string(const string& input)
+{
+  istringstream iss(input);
+  vector<string> tokens;
+  string token;
+  while (iss >> token)
+    tokens.push_back(token);
+  return tokens;
+}
+
+
 int main(int argc, char **argv)
 {
   unlink("bag.sqlite");
@@ -259,6 +271,35 @@ int main(int argc, char **argv)
                 if(auto pos = point.find(' '); pos != string::npos)
                   vo.y = atof(point.c_str() + pos + 1);
               }
+              else {
+                pnode=el.select_nodes("gml:Polygon/gml:exterior/gml:LinearRing/gml:posList");
+                if(pnode.begin() != pnode.end()) {
+                  string poslist = pnode.begin()->node().begin()->value();
+                  auto s = split_string(poslist);
+                  if(s.size() % 2) {
+                    cout<<"Odd size for position list in ring"<<endl;
+                  }
+                  else {
+                    vo.x = vo.y = 0;
+                    for(unsigned int pos = 0 ; pos < s.size() ; pos += 2) {
+                      vo.x += atof(s.at(pos).c_str());
+                      vo.y += atof(s.at(pos+1).c_str());
+                    }
+                    vo.x /= (s.size() / 2.0);
+                    vo.y /= (s.size() / 2.0);
+                  }
+                }
+              }
+              /* 
+<gml:Polygon srsName="urn:ogc:def:crs:EPSG::28992" srsDimension="2">
+  <gml:exterior>
+    <gml:LinearRing>
+      <gml:posList count="8">252451.865 593746.633 252450.808 593748.894 252431.9 593740.053 252432.842 593737.739 252433.901 593735.474 252435.595 593731.85 252454.618 593740.745 252451.865 593746.633</gml:posList>
+    </gml:LinearRing>
+  </gml:exterior>
+</gml:Polygon>
+              */
+              
             }
             else if(elname=="Objecten:maaktDeelUitVan") {
               if(auto iter = el; iter) {
