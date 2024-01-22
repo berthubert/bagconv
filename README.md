@@ -100,6 +100,19 @@ SQLite R*Tree module. This table (geoindex) can be queried rapidly to find
 `vbos` within certain x and y coordinates, or within certain longitudes and
 lattitudes. Use the `vbo_id` field to find associated places of dwelling.
 
+Sample query:
+
+```SQL
+select x as rdX, y as rdY,straat,woonplaats,postcode, (lat-?)*(lat-?)+(lon-?)*(lon-?) as deg2dist 
+from geoindex,alllabel where alllabel.vbo_id = geoindex.vbo_id and 
+minLat > ? and maxLat < ? and minLon > ? and maxLon < ? 
+order by deg2dist asc limit 10
+{lat, lat, lon, lon, lat-0.005, lat+0.005, lon-0.005, lon+0.005})
+```
+
+The question marks need to be replaced with the things between {curly
+braces} below the SQL.
+
 # Validity periods
 When comparing the output of this tool to commercial offerings or the [excellent live official database](https://bagviewer.kadaster.nl/lvbag/bag-viewer/index.html), you can find small discrepancies, mostly related to the validity period.
 
