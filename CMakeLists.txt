@@ -16,9 +16,5 @@ set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads REQUIRED)
 
 add_executable(bagconv bagconv.cc sqlwriter.cc rd2wgs84.cc ext/pugixml-1.13/src/pugixml.cpp)
-target_link_libraries(bagconv pthread  dl sqlite3 )
-
-
-add_executable(bagserv bagserv.cc sqlwriter.cc rd2wgs84.cc ext/pugixml-1.13/src/pugixml.cpp jsonhelper.cc)
-target_link_libraries(bagserv pthread dl sqlite3 z )
+target_link_libraries(bagconv pthread dl sqlite3 )
 
