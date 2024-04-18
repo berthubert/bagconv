@@ -27,19 +27,20 @@ Note that a run may take half an hour.
 
 After a run you will find the following directories in the project:
 
-    21M     build
+    20M     build
     3,1G    data
     96G     unpack
-    12G     dist
+    9,7G    dist
 
 The most valuable (IMHO) files are:
 
-    11G     dist/bag.sqlite
-    17M     dist/postcodes-nl.7z
-    41M     dist/postcodes-nl-geo.7z
+    8,8G    dist/bag.sqlite
+    17M	    dist/postcodes-nl.7z
+    378M    dist/postcodes-nl.csv
+    40M     dist/postcodes-nl-geo.7z
 
 You may run the clean script to clean up all build files:
 
     bash clean.sh
 
-This will free up about 111G (gigabyte) of data.
+This will free up about 109G (gigabyte) of data.
