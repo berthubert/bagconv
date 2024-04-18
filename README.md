@@ -43,3 +43,7 @@ You may run the clean script to clean up all build files:
     bash clean.sh
 
 This will free up about 111G (gigabyte) of data.
+
+## Credits
+
+This repo was forked from [berthubert/bagconv](https://github.com/berthubert/bagconv), which has more information on the project.
