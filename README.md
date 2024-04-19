@@ -42,4 +42,4 @@ You may run the clean script to clean up all build files:
 
     bash clean.sh
 
-This will free up about 100G (gigabyte) of data.
+This will free up all generated and downloaded data.
