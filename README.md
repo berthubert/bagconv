@@ -35,7 +35,7 @@ After a run you will find the following directories in the project:
 The most valuable (IMHO) files are:
 
     8,8G    dist/bag.sqlite
-    17M	    dist/postcodes-nl.7z
+    17M     dist/postcodes-nl.7z
     378M    dist/postcodes-nl.csv
     40M     dist/postcodes-nl-geo.7z
 
