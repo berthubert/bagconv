@@ -8,7 +8,7 @@ On a Debian based system:
 
     sudo apt install build-essential cmake sqlite3 libsqlite3-dev nlohmann-json3-dev zlib1g-dev wget unzip 7zip
 
-Or just docker if you run via Docker. You need 109G (gigabyte) of free disk space to run.
+Or just docker if you run via Docker. You need 109GB (gigabyte) of free disk space to run.
 
 ## Running
 
