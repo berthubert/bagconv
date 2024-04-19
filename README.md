@@ -35,8 +35,8 @@ After a run you will find the following directories in the project:
 The most valuable (IMHO) files are:
 
     8,8G    dist/bag.sqlite
-    17M     dist/postcodes-nl.7z
-    40M     dist/postcodes-nl-geo.7z
+    17M     dist/postcodes-nl.7z (see: [postcodes-nl](https://github.com/mevdschee/postcodes-nl/))
+    40M     dist/postcodes-nl-geo.7z (see: [postcodes-nl-geo](https://github.com/mevdschee/postcodes-nl-geo/))
 
 You may run the clean script to clean up all build files:
 
