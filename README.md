@@ -9,7 +9,7 @@ On a Debian based system:
 
     sudo apt install build-essential cmake sqlite3 libsqlite3-dev nlohmann-json3-dev zlib1g-dev wget unzip 7zip
 
-Or just docker if you run via Docker.
+Or just docker if you run via Docker. You need 109G (gigabyte) of free disk space to run.
 
 ## Running
 
@@ -42,4 +42,4 @@ You may run the clean script to clean up all build files:
 
     bash clean.sh
 
-This will free up about 109G (gigabyte) of data.
+This will free up about 100G (gigabyte) of data.
