@@ -6,7 +6,8 @@ Convert the official Dutch building/dwelling administration into a simpler forma
 
 On a Debian based system:
 
-    sudo apt install build-essential cmake sqlite3 libsqlite3-dev nlohmann-json3-dev zlib1g-dev wget unzip 7zip
+    sudo apt install build-essential cmake libsqlite3-dev nlohmann-json3-dev zlib1g-dev 
+    sudo apt install sqlite3 wget unzip 7zip
 
 Or just docker if you run via Docker. You need 109GB (gigabyte) of free disk space to run.
 
