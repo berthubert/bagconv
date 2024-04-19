@@ -1,7 +1,6 @@
 # bagconv-docker
 
 Convert the official Dutch building/dwelling administration into a simpler format.
-Also includes a small and fast web service for sharing this data.
 
 ## Requirements
 
