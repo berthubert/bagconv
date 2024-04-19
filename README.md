@@ -38,7 +38,7 @@ The most valuable (IMHO) files are:
     17M     dist/postcodes-nl.7z
     40M     dist/postcodes-nl-geo.7z
 
-Check [postcodes-nl](https://github.com/mevdschee/postcodes-nl/) and [postcodes-nl-geo](https://github.com/mevdschee/postcodes-nl-geo/) to load the CSV into a SQL database using PHP. 
+Check [postcodes-nl](https://github.com/mevdschee/postcodes-nl/) and [postcodes-nl-geo](https://github.com/mevdschee/postcodes-nl-geo/) to load the (7zip) CSV files into a SQL database using PHP. 
 
 You may run the clean script to clean up all build files:
 
