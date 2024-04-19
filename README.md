@@ -1,4 +1,4 @@
-# bagconv-docker
+# bagconv for docker (or local) use
 
 Convert the official Dutch building/dwelling administration into a simpler format.
 
