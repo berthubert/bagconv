@@ -1,6 +1,6 @@
 FROM debian:latest as base
 RUN useradd --system --create-home --home-dir /home/baguser --user-group --uid 1000 --shell /bin/bash baguser
-RUN apt update && apt install -y build-essential cmake sqlite3 libsqlite3-dev zlib1g-dev wget unzip
+RUN apt update && apt install -y build-essential cmake sqlite3 libsqlite3-dev zlib1g-dev wget unzip nlohmann-json3-dev
 
 FROM base as builder
 WORKDIR /build
