@@ -1,15 +1,14 @@
-# bagconv-docker
+# bagconv
 
-Convert the official Dutch building/dwelling administration into a simpler format.
-Also includes a small and fast web service for sharing this data.
+Convert the official Dutch building/dwelling administration into a simpler format. With docker support.
 
 ## Requirements
 
 On a Debian based system:
 
-    sudo apt install build-essential cmake sqlite3 libsqlite3-dev nlohmann-json3-dev zlib1g-dev wget unzip 7zip 7zip-standalone
+    sudo apt install build-essential cmake libsqlite3-dev nlohmann-json3-dev zlib1g-dev sqlite3 wget unzip 7zip 7zip-standalone
 
-Or just docker if you run via Docker. You need 109G (gigabyte) of free disk space to run.
+Or just docker if you run via Docker. You need 109GB (gigabyte) of free disk space to run.
 
 ## Running
 
@@ -37,6 +36,8 @@ The most valuable (IMHO) files are:
     8,8G    dist/bag.sqlite
     17M     dist/postcodes-nl.7z
     40M     dist/postcodes-nl-geo.7z
+
+Check [postcodes-nl](https://github.com/mevdschee/postcodes-nl/) and [postcodes-nl-geo](https://github.com/mevdschee/postcodes-nl-geo/) to load the (7zip) CSV files into a SQL database using PHP. 
 
 You may run the clean script to clean up all build files:
 
