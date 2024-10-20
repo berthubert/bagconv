@@ -4,12 +4,20 @@
 #include "sqlite3.h"
 using namespace std;
 
-MiniSQLite::MiniSQLite(std::string_view fname)
+MiniSQLite::MiniSQLite(std::string_view fname, SQLWFlag flag)
 {
-  if ( sqlite3_open(&fname[0], &d_sqlite)!=SQLITE_OK ) {
+  int flags;
+  if(flag == SQLWFlag::ReadOnly)
+    flags = SQLITE_OPEN_READONLY;
+  else
+    flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
+  
+  if ( sqlite3_open_v2(&fname[0], &d_sqlite, flags, 0)!=SQLITE_OK) {
     throw runtime_error("Unable to open "+(string)fname+" for sqlite");
   }
+  sqlite3_extended_result_codes(d_sqlite, 1);
   exec("PRAGMA journal_mode='wal'");
+  exec("PRAGMA foreign_keys=ON");
   sqlite3_busy_timeout(d_sqlite, 60000);
 }
 
@@ -56,15 +64,28 @@ vector<vector<string>> MiniSQLite::exec(std::string_view str)
   return d_rows; 
 }
 
-void MiniSQLite::bindPrep(const std::string& table, int idx, bool value) {   sqlite3_bind_int(d_stmts[table], idx, value ? 1 : 0);   }
-void MiniSQLite::bindPrep(const std::string& table, int idx, int value) {   sqlite3_bind_int(d_stmts[table], idx, value);   }
-void MiniSQLite::bindPrep(const std::string& table, int idx, uint32_t value) {   sqlite3_bind_int64(d_stmts[table], idx, value);   }
-void MiniSQLite::bindPrep(const std::string& table, int idx, long value) {   sqlite3_bind_int64(d_stmts[table], idx, value);   }
-void MiniSQLite::bindPrep(const std::string& table, int idx, unsigned long value) {   sqlite3_bind_int64(d_stmts[table], idx, value);   }
-void MiniSQLite::bindPrep(const std::string& table, int idx, long long value) {   sqlite3_bind_int64(d_stmts[table], idx, value);   }
-void MiniSQLite::bindPrep(const std::string& table, int idx, unsigned long long value) {   sqlite3_bind_int64(d_stmts[table], idx, value);   }
-void MiniSQLite::bindPrep(const std::string& table, int idx, double value) {   sqlite3_bind_double(d_stmts[table], idx, value);   }
-void MiniSQLite::bindPrep(const std::string& table, int idx, const std::string& value) {   sqlite3_bind_text(d_stmts[table], idx, value.c_str(), value.size(), SQLITE_TRANSIENT);   }
+static void checkBind(int rc)
+{
+  if(rc) {
+    throw std::runtime_error("Error binding value to prepared statement: " + string(sqlite3_errstr(rc)));
+  }
+}
+
+void MiniSQLite::bindPrep(const std::string& table, int idx, bool value) {   checkBind(sqlite3_bind_int(d_stmts[table], idx, value ? 1 : 0));   }
+void MiniSQLite::bindPrep(const std::string& table, int idx, int value) {   checkBind(sqlite3_bind_int(d_stmts[table], idx, value));   }
+void MiniSQLite::bindPrep(const std::string& table, int idx, uint32_t value) {   checkBind(sqlite3_bind_int64(d_stmts[table], idx, value));   }
+void MiniSQLite::bindPrep(const std::string& table, int idx, long value) {   checkBind(sqlite3_bind_int64(d_stmts[table], idx, value));   }
+void MiniSQLite::bindPrep(const std::string& table, int idx, unsigned long value) {   checkBind(sqlite3_bind_int64(d_stmts[table], idx, value));   }
+void MiniSQLite::bindPrep(const std::string& table, int idx, long long value) {   checkBind(sqlite3_bind_int64(d_stmts[table], idx, value));   }
+void MiniSQLite::bindPrep(const std::string& table, int idx, unsigned long long value) {   checkBind(sqlite3_bind_int64(d_stmts[table], idx, value));   }
+void MiniSQLite::bindPrep(const std::string& table, int idx, double value) {   checkBind(sqlite3_bind_double(d_stmts[table], idx, value));   }
+void MiniSQLite::bindPrep(const std::string& table, int idx, const std::string& value) {   checkBind(sqlite3_bind_text(d_stmts[table], idx, value.c_str(), value.size(), SQLITE_TRANSIENT));   }
+void MiniSQLite::bindPrep(const std::string& table, int idx, const std::vector<uint8_t>& value) {
+  if(value.empty())
+    checkBind(sqlite3_bind_zeroblob(d_stmts[table], idx, 0));
+  else
+    checkBind(sqlite3_bind_blob(d_stmts[table], idx, &value.at(0), value.size(), SQLITE_TRANSIENT));
+}
 
 
 void MiniSQLite::prepare(const std::string& table, string_view str)
@@ -80,12 +101,54 @@ void MiniSQLite::prepare(const std::string& table, string_view str)
   }
 }
 
-void MiniSQLite::execPrep(const std::string& table, std::vector<std::unordered_map<std::string, outvar_t>>* rows)
+struct DeadlineCatcher
+{
+  DeadlineCatcher(sqlite3* db, unsigned int msec) : d_sqlite(db), d_msec(msec)
+  {
+    if(!msec)
+      return;
+    clock_gettime(CLOCK_MONOTONIC, &d_ttd);
+    auto r = div(msec, 1000); // seconds
+    d_ttd.tv_sec += r.quot;
+    d_ttd.tv_nsec += 1000000 * r.rem;
+    
+    if(d_ttd.tv_nsec > 1000000000) {
+      d_ttd.tv_sec++;
+      d_ttd.tv_nsec -= 1000000000;
+    }
+    sqlite3_progress_handler(d_sqlite, 100, [](void *ptr) -> int {
+      DeadlineCatcher* us = (DeadlineCatcher*) ptr;
+      us->called++;
+      struct timespec now;
+      clock_gettime(CLOCK_MONOTONIC, &now);
+      return std::tie(us->d_ttd.tv_sec, us->d_ttd.tv_nsec) <
+	std::tie(now.tv_sec, now.tv_nsec);
+    }, this);
+  }
+
+  DeadlineCatcher(const DeadlineCatcher& rhs) = delete;
+  
+  ~DeadlineCatcher()
+  {
+    if(d_msec) {
+      sqlite3_progress_handler(d_sqlite, 0, 0, 0); // remove
+      //      cout<<"Was called "<<called<<" times\n";
+    }
+  }
+  sqlite3* d_sqlite;
+  const unsigned int d_msec;
+  struct timespec d_ttd;
+  unsigned int called = 0;
+};
+
+void MiniSQLite::execPrep(const std::string& table, std::vector<std::unordered_map<std::string, outvar_t>>* rows, unsigned int msec)
 {
   int rc;
   if(rows)
     rows->clear();
 
+  DeadlineCatcher dc(d_sqlite, msec); // noop if msec = 0
+  
   std::unordered_map<string, outvar_t> row;
   for(;;) {
     rc = sqlite3_step(d_stmts[table]); 
@@ -99,10 +162,18 @@ void MiniSQLite::execPrep(const std::string& table, std::vector<std::unordered_m
         if(type == SQLITE_TEXT) {
           const char* p = (const char*)sqlite3_column_text(d_stmts[table], n);
           if(!p) {
-            row[sqlite3_column_name(d_stmts[table], n)]= nullptr;
+            row[sqlite3_column_name(d_stmts[table], n)] = string();
           }
           else
-            row[sqlite3_column_name(d_stmts[table], n)]=p;
+            row[sqlite3_column_name(d_stmts[table], n)] = string(p, sqlite3_column_bytes(d_stmts[table], n));
+        }
+        else if(type == SQLITE_BLOB) {
+          const uint8_t* p = (const uint8_t*)sqlite3_column_blob(d_stmts[table], n);
+          if(!p) {
+            row[sqlite3_column_name(d_stmts[table], n)]= vector<uint8_t>();
+          }
+          else
+            row[sqlite3_column_name(d_stmts[table], n)]=vector<uint8_t>(p, p+sqlite3_column_bytes(d_stmts[table], n));
         }
         else if(type == SQLITE_FLOAT) {
           row[sqlite3_column_name(d_stmts[table], n)]= sqlite3_column_double(d_stmts[table], n);
@@ -117,8 +188,11 @@ void MiniSQLite::execPrep(const std::string& table, std::vector<std::unordered_m
       }
       rows->push_back(row);
     }
-    else
+    else {
+      sqlite3_reset(d_stmts[table]);
+      sqlite3_clear_bindings(d_stmts[table]);
       throw runtime_error("Sqlite error "+std::to_string(rc)+": "+sqlite3_errstr(rc));
+    }
   }
   rc= sqlite3_reset(d_stmts[table]);
   if(rc != SQLITE_OK)
@@ -208,32 +282,51 @@ void SQLiteWriter::addValue(const std::vector<std::pair<const char*, var_t>>& va
   addValueGeneric(table, values);
 }
 
+void SQLiteWriter::addOrReplaceValue(const initializer_list<std::pair<const char*, var_t>>& values, const std::string& table)
+{
+  addValueGeneric(table, values, true);
+}
+
+void SQLiteWriter::addOrReplaceValue(const std::vector<std::pair<const char*, var_t>>& values, const std::string& table)
+{
+  addValueGeneric(table, values, true);
+}
+
+
 
 template<typename T>
-void SQLiteWriter::addValueGeneric(const std::string& table, const T& values)
+void SQLiteWriter::addValueGeneric(const std::string& table, const T& values, bool replace)
 {
+  if(d_flag == SQLWFlag::ReadOnly)
+    throw std::runtime_error("Attempting to write to a read-only database instance");
+  
   std::lock_guard<std::mutex> lock(d_mutex);
-  if(!d_db.isPrepared(table) || !equal(values.begin(), values.end(),
+  if(!d_db.isPrepared(table) || d_lastreplace[table] != replace || !equal(values.begin(), values.end(),
                                        d_lastsig[table].cbegin(), d_lastsig[table].cend(),
                             [](const auto& a, const auto& b)
   {
     return a.first == b;
   })) {
     //    cout<<"Starting a new prepared statement"<<endl;
-    string q = "insert into '"+table+"' (";
+    string q = string("insert ") + (replace ? "or replace " : "") + "into '"+ table+"' (";
     string qmarks;
     bool first=true;
     for(const auto& p : values) {
       if(!haveColumn(table, p.first)) {
         if(std::get_if<double>(&p.second)) {
-          d_db.addColumn(table, p.first, "REAL", d_meta[p.first]);
+          d_db.addColumn(table, p.first, "REAL", d_meta[table][p.first]);
           d_columns[table].push_back({p.first, "REAL"});
         }
         else if(std::get_if<string>(&p.second)) {
-          d_db.addColumn(table, p.first, "TEXT", d_meta[p.first]);
+          d_db.addColumn(table, p.first, "TEXT", d_meta[table][p.first]);
           d_columns[table].push_back({p.first, "TEXT"});
-        } else  {
-          d_db.addColumn(table, p.first, "INT", d_meta[p.first]);
+        }
+        else if(std::get_if<vector<uint8_t>>(&p.second)) {
+          d_db.addColumn(table, p.first, "BLOB", d_meta[table][p.first]);
+          d_columns[table].push_back({p.first, "BLOB"});
+        }
+        else  {
+          d_db.addColumn(table, p.first, "INT", d_meta[table][p.first]);
           d_columns[table].push_back({p.first, "INT"});
         }
 
@@ -254,6 +347,7 @@ void SQLiteWriter::addValueGeneric(const std::string& table, const T& values)
     d_lastsig[table].clear();
     for(const auto& p : values)
       d_lastsig[table].push_back(p.first);
+    d_lastreplace[table]=replace;
   }
   
   int n = 1;
@@ -280,8 +374,9 @@ std::vector<std::unordered_map<std::string, std::string>> SQLiteWriter::query(co
                        str=arg;
         else if constexpr (std::is_same_v<T, nullptr_t>)
                        str="";
-        else 
-          str = to_string(arg);
+        else if constexpr (std::is_same_v<T, vector<uint8_t>>)
+          str = "<blob>";
+        else str = to_string(arg);
       }, f.second);
       rowout[f.first] = str;
     }
@@ -290,14 +385,17 @@ std::vector<std::unordered_map<std::string, std::string>> SQLiteWriter::query(co
   return ret;
 }
 
-std::vector<std::unordered_map<std::string, MiniSQLite::outvar_t>> SQLiteWriter::queryT(const std::string& q, const initializer_list<var_t>& values)
+std::vector<std::unordered_map<std::string, MiniSQLite::outvar_t>> SQLiteWriter::queryT(const std::string& q, const initializer_list<var_t>& values, unsigned int msec)
 {
-  return queryGen(q, values);
+  return queryGen(q, values, msec);
 }
 
 template<typename T>
-vector<std::unordered_map<string, MiniSQLite::outvar_t>> SQLiteWriter::queryGen(const std::string& q, const T& values)
+vector<std::unordered_map<string, MiniSQLite::outvar_t>> SQLiteWriter::queryGen(const std::string& q, const T& values, unsigned int msec)
 {
+  if(msec && d_flag != SQLWFlag::ReadOnly)
+    throw std::runtime_error("Timeout only possible for read-only connections");
+  
   std::lock_guard<std::mutex> lock(d_mutex);
   d_db.prepare("", q); // we use an empty table name so as not to collide with other things
   int n = 1;
@@ -308,7 +406,7 @@ vector<std::unordered_map<string, MiniSQLite::outvar_t>> SQLiteWriter::queryGen(
     n++;
   }
   vector<unordered_map<string, MiniSQLite::outvar_t>> ret;
-  d_db.execPrep("", &ret);
+  d_db.execPrep("", &ret, msec);
 
   return ret;
 }
