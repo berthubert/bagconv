@@ -8,9 +8,15 @@
 
 using namespace std;
 
-void convToHTTP(httplib::Response & res, const std::vector<std::unordered_map<std::string,MiniSQLite::outvar_t>>& content)
+static void convToHTTP(httplib::Response & res, const std::vector<std::unordered_map<std::string,MiniSQLite::outvar_t>>& content)
 {
-  res.set_content(packResultsJsonStr(content), "application/json");
+  auto j = packResultsJson(content);
+  for(auto& r : j) {
+    if(r.count("gebruiksdoelen")) {
+      r["gebruiksdoelen"] = nlohmann::json::parse((string)r["gebruiksdoelen"]);
+    }
+  }
+  res.set_content(j.dump(), "application/json");
 }
 
 int main(int argc, char**argv)
