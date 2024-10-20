@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <script defer src="cdn.min.js"></script>
+</head>
+  <body>
+    
+      <div x-data="{ postcode: '', huisnummer: '', straat: '', woonplaats: '', huisrest: [], huisrestkeuze: '', gebruiksdoelen: [],
+                   lookup: function()
+                   {
+                     this.woonplaats='';
+                     this.straat='';
+                     this.huisrest=[];
+                     this.huisrestkeuze='';
+                     var lookuppostcode;
+                     if(this.postcode[4]==' ') {
+                       lookuppostcode= this.postcode.replace(/\s+/g, '');
+                     }
+                     else lookuppostcode=this.postcode;
+                     if(lookuppostcode!='' && this.huisnummer!='') 
+                       fetch('/'+ lookuppostcode+'/'+this.huisnummer)
+                       .then(response => response.json())
+                       .then(data => {this.woonplaats=data[0].woonplaats;
+		       this.straat=data[0].straat;
+		       this.gebruiksdoelen=data[0].gebruiksdoelen;
+                       this.huisrest=[];
+                       for (const element of data) {
+                          if(element.huistoevoeging=='') {
+                            this.huisrest.push(element.huisletter);
+                          } else {
+                            this.huisrest.push(element.huisletter+'-'+ element.huistoevoeging);
+                          }
+                       }
+                      })
+                   }
+      }">
+        <label for="postcode">Postcode:</label>
+        <input type="text" id="postcode" name="postcode"
+               x-on:change="lookup()" x-model="postcode" maxlength="7" size="7">
+        <label for="huisnummer">Huisnummer:</label>
+        <input type="number" id="huisnummer" name="huisnummer" x-on:change="lookup()" x-model="huisnummer" maxlength="5" size="5">
+        <label for="huisrest">Huisletter en toevoeging:</label>
+        <select x-model="huisrestkeuze">
+          <template x-for="hr in huisrest">
+            <option x-text="hr"></option>
+          </template>
+        </select>
+        
+        <p>
+          <span x-text="straat"></span>
+          <span x-text="huisnummer"></span>
+          <span x-text="huisrestkeuze"></span>
+          <br/>
+          <span x-text="postcode"></span>
+          <span x-text="woonplaats"></span>
+	  <br/>
+	  Gebruiksdoelen:
+	  <ul>
+	    <template x-for="gd in gebruiksdoelen">
+	      <li x-text="gd"></li>
+	    </template>
+	  </ul>
+        </p>
+      </div>
+  </body>
+</html>
