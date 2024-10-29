@@ -122,10 +122,11 @@ int main(int argc, char**argv)
     lsqw.queryJ(res, "select oprs.id,naam,woonplaats,count(1) as 'count' from tri(?),oprs,nums where oprs.naam=a and oprs.id==nums.ligtAanRef group by oprs.id order by 4 desc limit 10", {street});
   });
   */
-
+  /*
   svr.set_logger([](const auto& req, const auto&) {
     fmt::print("Request: {} {}\n", req.path, req.params);
   });
+  */
   
   int port = argc==1 ? 8080 : atoi(argv[1]);
   cout<<"Will listen on http://127.0.0.1:"<<port<< " using "<<std::thread::hardware_concurrency() << " threads\n";
