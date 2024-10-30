@@ -19,7 +19,7 @@
 #endif
 
 #ifndef CPPHTTPLIB_KEEPALIVE_TIMEOUT_CHECK_INTERVAL_USECOND
-#define CPPHTTPLIB_KEEPALIVE_TIMEOUT_CHECK_INTERVAL_USECOND 10000
+#define CPPHTTPLIB_KEEPALIVE_TIMEOUT_CHECK_INTERVAL_USECOND 100000
 #endif
 
 #ifndef CPPHTTPLIB_KEEPALIVE_MAX_COUNT
@@ -3283,7 +3283,7 @@ inline bool keep_alive(const std::atomic<socket_t> &svr_sock, socket_t sock,
       return true; // Ready for read
     }
 
-    std::this_thread::sleep_for(microseconds{interval_usec});
+//    std::this_thread::sleep_for(microseconds{interval_usec});
   }
 
   return false;

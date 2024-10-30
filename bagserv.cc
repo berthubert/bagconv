@@ -1,5 +1,5 @@
 #define CPPHTTPLIB_USE_POLL
-#define CPPHTTPLIB_THREAD_POOL_COUNT 256
+#define CPPHTTPLIB_THREAD_POOL_COUNT 32
 
 #include "httplib.h"
 #include "sqlwriter.hh"
@@ -42,8 +42,8 @@ int main(int argc, char**argv)
 {
   httplib::Server svr;
   svr.set_mount_point("/", "./html/");
-  //  svr.set_keep_alive_max_count(1); // Default is 5
-  //svr.set_keep_alive_timeout(1);  // Default is 5
+  svr.set_keep_alive_max_count(1); // Default is 5
+  svr.set_keep_alive_timeout(1);  // Default is 5
   ThingPool<SQLiteWriter> tp("bag.sqlite", SQLWFlag::ReadOnly);
   
   svr.Get(R"(/(\d\d\d\d[A-Z][A-Z])/(\d+)/([a-zA-Z]))", [&tp](const httplib::Request &req, httplib::Response &res) {
@@ -128,7 +128,7 @@ int main(int argc, char**argv)
   */
   
   int port = argc==1 ? 8080 : atoi(argv[1]);
-  cout<<"Will listen on http://127.0.0.1:"<<port<< " using "<<std::thread::hardware_concurrency() << " threads\n";
+  cout<<"Will listen on http://127.0.0.1:"<<port<< " using "<< CPPHTTPLIB_THREAD_POOL_COUNT << " threads\n";
   
   svr.listen("0.0.0.0", port);
 }
