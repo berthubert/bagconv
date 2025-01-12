@@ -193,7 +193,7 @@ int main(int argc, char **argv)
           
           int id; 
           string name;
-          bool geconstateerd;
+          bool geconstateerd=false;
 
           for(const auto& el : stand) {
             string elname = el.name();

@@ -5,7 +5,7 @@ project(bagconv VERSION 1.0
                   LANGUAGES CXX)
 
 set(CMAKE_CXX_FLAGS "-Wall -g -Wextra -O3")
-include_directories(ext/pugixml-1.13/src/ ext/cpp-httplib-0.13.1/ ext/nlohmann/)
+include_directories(ext/pugixml-1.13/src/ ext/cpp-httplib-0.18.1/ ext/nlohmann/)
 
 set(CMAKE_CXX_STANDARD 17 CACHE STRING "The C++ standard to use")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
