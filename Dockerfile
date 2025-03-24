@@ -1,13 +1,13 @@
-FROM debian:latest as base
+FROM debian:latest AS base
 RUN useradd --system --create-home --home-dir /home/baguser --user-group --uid 1000 --shell /bin/bash baguser
 RUN apt update && apt install -y build-essential cmake sqlite3 libsqlite3-dev zlib1g-dev wget unzip nlohmann-json3-dev
 
-FROM base as builder
+FROM base AS builder
 WORKDIR /build
 COPY . .
 RUN --mount=type=cache,target=/build/CMakeFiles cmake . && make
 
-FROM builder as bagger
+FROM builder AS bagger
 WORKDIR /bagger
 SHELL ["/bin/bash", "-c"]
 RUN wget https://service.pdok.nl/lv/bag/atom/downloads/lvbag-extract-nl.zip \
@@ -23,7 +23,7 @@ RUN wget https://service.pdok.nl/lv/bag/atom/downloads/lvbag-extract-nl.zip \
     # Uncomment to build additional views.
     # sqlite3 bag.sqlite < /build/geo-queries
 
-FROM base as server
+FROM base AS server
 WORKDIR /srv
 RUN chown baguser:baguser /srv && apt purge -y wget wget build-essential cmake
 COPY --from=builder --chown=baguser:baguser /build/bagconv /build/bagserv ./
