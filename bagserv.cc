@@ -57,7 +57,7 @@ int main(int argc, char**argv)
   });
 
   // with 'toevoeging'
-  svr.Get(R"(/(\d\d\d\d[A-Z][A-Z])/(\d+)/([a-zA-Z])/([a-zA-Z0-9]*))", [&tp](const httplib::Request &req, httplib::Response &res) {
+  svr.Get(R"(/(\d\d\d\d[A-Z][A-Z])/(\d+)/([a-zA-Z]?)/([a-zA-Z0-9]*))", [&tp](const httplib::Request &req, httplib::Response &res) {
     auto pcode = req.matches[1];
     auto huisnum = req.matches[2];
     auto huisletter = (string)req.matches[3];
@@ -129,6 +129,15 @@ int main(int argc, char**argv)
   
   int port = argc==1 ? 8080 : atoi(argv[1]);
   cout<<"Will listen on http://127.0.0.1:"<<port<< " using "<< CPPHTTPLIB_THREAD_POOL_COUNT << " threads\n";
+
+  svr.set_socket_options([](socket_t sock) {
+    int yes = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR,
+               reinterpret_cast<const void *>(&yes), sizeof(yes));
+  });
+
   
   svr.listen("0.0.0.0", port);
+
+  cout <<"Exiting (somehow)" << endl;
 }
