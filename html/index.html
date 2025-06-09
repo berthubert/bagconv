@@ -18,8 +18,12 @@
                        lookuppostcode= this.postcode.replace(/\s+/g, '');
                      }
                      else lookuppostcode=this.postcode;
+
+                     lookuppostcode = lookuppostcode.toUpperCase();
+                     this.postcode = lookuppostcode;
+                     
                      if(lookuppostcode!='' && this.huisnummer!='') 
-                       fetch('/'+ lookuppostcode+'/'+this.huisnummer)
+                       fetch(lookuppostcode+'/'+this.huisnummer)
                        .then(response => response.json())
                        .then(data => {this.woonplaats=data[0].woonplaats;
 		       this.straat=data[0].straat;
@@ -35,6 +39,7 @@
                       })
                    }
       }">
+      <h1>Debugging interface</h1>
         <label for="postcode">Postcode:</label>
         <input type="text" id="postcode" name="postcode"
                x-on:change="lookup()" x-model="postcode" maxlength="7" size="7">
