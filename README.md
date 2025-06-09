@@ -225,6 +225,12 @@ Often, the testing instance on
 active. Send it queries like
 [https://berthub.eu/pcode/7311KZ/110](https://berthub.eu/pcode/7311KZ/110).
 
+Note, if you want to run this service yourself, and use nginx as a front
+proxy, you need to have this in your server stanza: "merge_slashes off;".
+Otherwise URLs like https://yourserver/9728KX/156//2 don't work (this is a
+house without a house letter, but with a house toevoeging).
+
+
 # Fun testing addresses
 
  * Binnenhof 19, 's-Gravenhage: One VBO with several addresses (Nummerindicaties)
