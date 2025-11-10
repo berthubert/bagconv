@@ -382,7 +382,7 @@ int main(int argc, char **argv)
             else if(elname=="Objecten:ligtAan")
               na.ligtAan = el.child("Objecten-ref:OpenbareRuimteRef").begin()->value();
             else if(elname=="Objecten:ligtIn") {
-              na.ligtIn = atol(el.child("Objecten-ref:WoonplaatsRef").begin()->value());
+              na.ligtIn = atoi(el.child("Objecten-ref:WoonplaatsRef").begin()->value());
               woonplaats=wpls[na.ligtIn];
             }
             else if(!once[{type, elname}]++) {
