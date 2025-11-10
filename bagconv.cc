@@ -359,6 +359,9 @@ int main(int argc, char **argv)
         else if(type=="Objecten:Nummeraanduiding") {
           string enddate, begindate;
 
+	  if(!currentlyActive(stand, today, &enddate, &begindate))
+	    continue;
+	  
           NummerAanduiding na;
           string woonplaats;
           string id;
@@ -379,42 +382,40 @@ int main(int argc, char **argv)
             else if(elname=="Objecten:ligtAan")
               na.ligtAan = el.child("Objecten-ref:OpenbareRuimteRef").begin()->value();
             else if(elname=="Objecten:ligtIn") {
-              na.ligtIn = atoi(el.child("Objecten-ref:WoonplaatsRef").begin()->value());
+              na.ligtIn = atol(el.child("Objecten-ref:WoonplaatsRef").begin()->value());
               woonplaats=wpls[na.ligtIn];
             }
             else if(!once[{type, elname}]++) {
               cout<<"Ignoring "<<type<<" element "<<elname<<": "<<el.begin()->value()<<endl;
             }
           }
-          if(woonplaats.empty())
-            woonplaats=wpls[oprs[na.ligtAan].ligtIn];
+          if(woonplaats.empty()) {
+	    if(!oprs.count(na.ligtAan)) {
+	      cout<<"Could not find oprs for "<<na.ligtAan<<endl;
+	    }
+	    else if(!wpls.count(oprs[na.ligtAan].ligtIn)) {
+	      cout<< "Could not find wpls for "<<oprs[na.ligtAan].ligtIn<<endl;
+	    }
+	    else
+	      woonplaats=wpls[oprs[na.ligtAan].ligtIn];
+	  }
             
           if(woonplaats.empty()) {
-            cout<<na.ligtAan<<endl;
-            cout<<oprs[na.ligtAan].ligtIn<<endl;
-            cout<<"Failure to look up woonplaats for Nummeraanduiding id "<<id<<", make sure to parse WPL and OPR files first!"<<endl;
-            exit(1);
-          }
+	    cout<<"na.ligtAan: "<<na.ligtAan<<endl;
+	    cout<<"oprs[na.ligtAan].ligtIn: "<<oprs[na.ligtAan].ligtIn<<endl;
+	    cout<<"oprs[na.ligtAan].type: "<<oprs[na.ligtAan].type<<endl;
+	    cout<<"Failure to look up woonplaats for Nummeraanduiding id "<<id<<", make sure to parse WPL and OPR files first!"<<endl;
+	    stand.print(cout); 
+	    exit(1);
+	  }
 
-          if(!currentlyActive(stand, today, &enddate, &begindate)) {
-            if(na.ligtIn >=0)
-              sqw.addValue({{"id", id}, {"ligtAanRef", na.ligtAan}, {"ligtInRef", na.ligtIn}, {"woonplaats", woonplaats}, {"postcode", na.postcode}, {"huisnummer", na.huisnummer}, {"huisletter", na.huisletter}, {"huistoevoeging", na.toevoeging}, {"status", na.status}, {"begindate", begindate}, {"enddate", enddate}}, "inactnums");
-          else
-            sqw.addValue({{"id", id}, {"ligtAanRef", na.ligtAan}, {"woonplaats", woonplaats}, {"postcode", na.postcode}, {"huisnummer", na.huisnummer}, {"huisletter", na.huisletter}, {"huistoevoeging", na.toevoeging}, {"status", na.status}, {"begindate", begindate}, {"enddate", enddate}}, "inactnums");
-
-          }
-          else {
-          // possibly store enddate
-          if(na.ligtIn >=0)
-            sqw.addValue({{"id", id}, {"ligtAanRef", na.ligtAan}, {"ligtInRef", na.ligtIn}, {"woonplaats", woonplaats}, {"postcode", na.postcode}, {"huisnummer", na.huisnummer}, {"huisletter", na.huisletter}, {"huistoevoeging", na.toevoeging}, {"status", na.status}}, "nums");
-          else
-            sqw.addValue({{"id", id}, {"ligtAanRef", na.ligtAan}, {"woonplaats", woonplaats}, {"postcode", na.postcode}, {"huisnummer", na.huisnummer}, {"huisletter", na.huisletter}, {"huistoevoeging", na.toevoeging}, {"status", na.status}}, "nums");
-          }
+	  // possibly store enddate
+	  if(na.ligtIn >=0)
+	    sqw.addValue({{"id", id}, {"ligtAanRef", na.ligtAan}, {"ligtInRef", na.ligtIn}, {"woonplaats", woonplaats}, {"postcode", na.postcode}, {"huisnummer", na.huisnummer}, {"huisletter", na.huisletter}, {"huistoevoeging", na.toevoeging}, {"status", na.status}}, "nums");
+	  else
+	    sqw.addValue({{"id", id}, {"ligtAanRef", na.ligtAan}, {"woonplaats", woonplaats}, {"postcode", na.postcode}, {"huisnummer", na.huisnummer}, {"huisletter", na.huisletter}, {"huistoevoeging", na.toevoeging}, {"status", na.status}}, "nums");
         }
         else if(type=="Objecten:OpenbareRuimte") {
-          string enddate;
-          if(!currentlyActive(stand, today, &enddate))
-            continue;
           OpenbareRuimte opr;
           string id;
           for(const auto& el : stand) {
@@ -440,12 +441,19 @@ int main(int argc, char **argv)
             }
           }
 
+          string enddate, begindate;
+          if(!currentlyActive(stand, today, &enddate, &begindate)) {
+	    //cout << "would've skipped id "<<id<<": '"<<begindate<<"' - '"<<enddate<<"'"<<endl;
+	    continue;
+	  }
+
+	  
           // possibly store enddate here
           if(!opr.verkorteNaam.empty()) 
             sqw.addValue({{"id", id}, {"naam", opr.naam}, {"verkorteNaam", opr.verkorteNaam}, {"type", opr.type}, {"status", opr.status}, {"ligtInRef", opr.ligtIn}}, "oprs");
           else
             sqw.addValue({{"id", id}, {"naam", opr.naam}, {"type", opr.type}, {"status", opr.status}, {"ligtInRef", opr.ligtIn}}, "oprs");
-          
+
           oprs[id]=opr;
         }
         else
