@@ -1,5 +1,5 @@
 #include "sqlwriter.hh"
-#include "nlohmann/json.hpp"
+#include "json.hpp"
 
 using namespace std;
 
